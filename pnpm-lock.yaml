@@ -35,6 +35,9 @@ importers:
       eslint-plugin-unused-imports:
         specifier: ^4.1.4
         version: 4.1.4(@typescript-eslint/eslint-plugin@8.37.0(@typescript-eslint/parser@8.37.0(eslint@8.57.1)(typescript@5.8.3))(eslint@8.57.1)(typescript@5.8.3))(eslint@8.57.1)
+      json:
+        specifier: ^11.0.0
+        version: 11.0.0
       prettier:
         specifier: ^3.6.2
         version: 3.6.2
@@ -1330,6 +1333,11 @@ packages:
   json5@2.2.3:
     resolution: {integrity: sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==}
     engines: {node: '>=6'}
+    hasBin: true
+
+  json@11.0.0:
+    resolution: {integrity: sha512-N/ITv3Yw9Za8cGxuQqSqrq6RHnlaHWZkAFavcfpH/R52522c26EbihMxnY7A1chxfXJ4d+cEFIsyTgfi9GihrA==}
+    engines: {node: '>=0.10.0'}
     hasBin: true
 
   jsx-ast-utils@3.3.5:
@@ -3211,6 +3219,8 @@ snapshots:
       minimist: 1.2.8
 
   json5@2.2.3: {}
+
+  json@11.0.0: {}
 
   jsx-ast-utils@3.3.5:
     dependencies:
