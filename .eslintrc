@@ -1,0 +1,47 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "env": {
+    "browser": true,
+    "node": true,
+    "es6": true
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  },
+  "extends": [
+    "prettier",
+    "plugin:prettier/recommended",
+    "plugin:react-hooks/recommended",
+    "plugin:import/recommended",
+  ],
+  "plugins": [ "@typescript-eslint", "react", "react-hooks", "import", "unused-imports", "prettier" ],
+  "rules": {
+    "import/no-unresolved": "off",
+    "import/named": "off",
+    "import/namespace": "off",
+    "import/no-named-as-default-member": "off",
+    "import/extensions": [ "error", "ignorePackages" ],
+
+    "import/order": ["error", {
+      "groups": [
+        "builtin",
+        "external",
+        "internal",
+        ["parent", "sibling", "index"],
+        "object",
+        "type"
+      ],
+      "newlines-between": "never",
+      "alphabetize": {
+        "order": "asc",
+        "caseInsensitive": true
+      }
+    }],
+
+    // "simple-import-sort/imports": "error",
+    "unused-imports/no-unused-imports": "error"
+  }
+}

@@ -1,0 +1,6 @@
+commit-message-incrementing: Disabled
+branches:
+  main:
+    increment: None
+  develop:
+    increment: None

@@ -1,0 +1,44 @@
+{
+  "name": "@pmndrs/timeline",
+  "author": "Bela Bohlender",
+  "description": "Write composable declarative 3D behaviors like a story.",
+  "homepage": "https://github.com/pmndrs/timeline",
+  "version": "0.0.0",
+  "keywords": [
+    "r3f",
+    "three.js",
+    "react",
+    "typescript",
+    "async",
+    "yield",
+    "story",
+    "timeline"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "check:prettier": "prettier --check src",
+    "check:eslint": "eslint \"src/**/*.{ts,tsx}\"",
+    "fix:prettier": "prettier --write src",
+    "fix:eslint": "eslint \"src/**/*.{ts,tsx}\" --fix"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:pmndrs/xr.git"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "main": "dist/index.js"
+  },
+  "type": "module",
+  "main": "src/index.ts",
+  "devDependencies": {
+    "three": "^0.178.0",
+    "@types/three": "^0.178.0"
+  },
+  "peerDependencies": {
+    "three": "*"
+  }
+}
