@@ -25,12 +25,17 @@ export async function* action<T>(a: Action<T>): AsyncIterableActions<T> {
   yield a
 }
 
-export async function* parallel<T>(type: 'all' | 'race', ...timelines: Array<Timeline<T>>): AsyncIterableActions<T> {
+export async function* parallel<T>(
+  type: 'all' | 'race',
+  ...timelines: Array<Timeline<T> | boolean>
+): AsyncIterableActions<T> {
   const internalAbortController = new AbortController()
   const refs: Array<UpdateRef<T>> = timelines.map(() => ({}))
-  const promises = timelines.map((timeline, i) =>
-    buildAsync(typeof timeline === 'function' ? timeline() : timeline, refs[i]!, internalAbortController.signal),
-  )
+  const promises = timelines
+    .filter((timeline) => typeof timeline != 'boolean')
+    .map((timeline, i) =>
+      buildAsync(typeof timeline === 'function' ? timeline() : timeline, refs[i]!, internalAbortController.signal),
+    )
   yield {
     update(state, clock) {
       const length = timelines.length
