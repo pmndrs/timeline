@@ -1,5 +1,5 @@
 import { Canvas, useThree } from '@react-three/fiber'
-import { useTimeline, action, duration, parallel, forever } from '@react-three/timeline'
+import { useTimeline, action, timePassed, parallel, forever } from '@react-three/timeline'
 import { useRef } from 'react'
 import { Mesh } from 'three'
 
@@ -31,7 +31,7 @@ function Scene() {
         action({ until: forever() }),
       )
       console.log('waiting 1 second')
-      yield* action({ until: duration(1, 'seconds') })
+      yield* action({ until: timePassed(1, 'seconds') })
     }
   }, [])
 

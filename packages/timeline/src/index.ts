@@ -2,33 +2,29 @@ export type Action<T> = {
   readonly update?: ActionUpdate<T>
   readonly until?: Promise<unknown>
   readonly cleanup?: () => void
-} & ActionUpdateOptions
+}
 
-export type ActionUpdateOptions = Partial<{
-  //readonly ease: EaseFunction
-}>
-
-export type ActionUpdate<T> = (state: T, clock: ActionClock, options?: ActionUpdateOptions) => boolean
+export type ActionUpdate<T> = (state: T, clock: ActionClock, easing?: number) => boolean
 
 export type ActionClock = {
   readonly time: number
   readonly delta: number
 }
 
-export type Timeline<T> = AsyncIterableActionsFunction<T> | AsyncIterableActions<T>
+export type Timeline<T, R = any> = ReusableTimeline<T, R> | NonReuseableTimeline<T, R>
 
-export type AsyncIterableActionsFunction<T> = () => AsyncIterableActions<T>
+export type ReusableTimeline<T, R = any> = () => NonReuseableTimeline<T, R>
 
-export type AsyncIterableActions<T> = AsyncIterable<Action<T>>
+export type NonReuseableTimeline<T, R = any> = AsyncIterable<Action<T>, R>
 
-export async function* action<T>(a: Action<T>): AsyncIterableActions<T> {
+export async function* action<T>(a: Action<T>): NonReuseableTimeline<T> {
   yield a
 }
 
 export async function* parallel<T>(
   type: 'all' | 'race',
   ...timelines: Array<Timeline<T> | boolean>
-): AsyncIterableActions<T> {
+): NonReuseableTimeline<T> {
   const internalAbortController = new AbortController()
   const refs: Array<UpdateRef<T>> = timelines.map(() => ({}))
   const promises = timelines
@@ -53,9 +49,9 @@ export async function* parallel<T>(
 
 export type Update<T> = (state: T, delta: number) => void
 
-export function build<T>(timeline: Timeline<T>, abortSignal?: AbortSignal): Update<T> {
+export function build<T>(timeline: Timeline<T>, abortSignal?: AbortSignal, onError = console.error): Update<T> {
   const ref: UpdateRef<T> = {}
-  buildAsync(timeline, ref, abortSignal)
+  buildAsync(timeline, ref, abortSignal).catch(onError)
   const clock = { delta: 0.00001, time: 0 } satisfies ActionClock
   return (state, delta) => {
     clock.time += delta
@@ -64,14 +60,21 @@ export function build<T>(timeline: Timeline<T>, abortSignal?: AbortSignal): Upda
   }
 }
 
+export async function* abortable<T>(timeline: Timeline<T>, abortSignal?: AbortSignal) {
+  const ref: UpdateRef<T> = {}
+  const timelineFinishedOrAborted = buildAsync(timeline, ref, abortSignal)
+  yield* action<T>({
+    update: (state, clock, easing) => {
+      ref.current?.(state, clock, easing)
+      return true
+    },
+    until: timelineFinishedOrAborted,
+  })
+}
+
 type UpdateRef<T> = { current?: (...params: Parameters<ActionUpdate<T>>) => void }
 
-async function buildAsync<T>(
-  timeline: Timeline<T>,
-  updateRef: UpdateRef<T>,
-  abortSignal?: AbortSignal,
-  options?: ActionUpdateOptions,
-) {
+async function buildAsync<T>(timeline: Timeline<T>, updateRef: UpdateRef<T>, abortSignal?: AbortSignal) {
   const abortPromise =
     abortSignal != null ? new Promise<unknown>((resolve) => abortSignal.addEventListener('abort', resolve)) : undefined
   timeline = typeof timeline === 'function' ? timeline() : timeline
@@ -91,7 +94,7 @@ async function buildAsync<T>(
       let resolveRef!: (value: unknown) => void
       promises.push(new Promise((resolve) => (resolveRef = resolve)))
       updateRef.current = (state, delta) => {
-        if (!actionUpdate(state, delta, options)) {
+        if (!actionUpdate(state, delta)) {
           resolveRef(undefined)
         }
       }

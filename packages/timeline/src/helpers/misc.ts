@@ -1,6 +1,7 @@
 import { AnimationAction, AnimationMixer } from 'three'
+import { action, parallel, type ActionUpdate, type Timeline } from '../index.js'
 
-export function duration(time: number, unit: 'seconds' | 'milliseconds'): Promise<void> {
+export function timePassed(time: number, unit: 'seconds' | 'milliseconds'): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, unit === 'seconds' ? time * 1000 : time))
 }
 
@@ -32,4 +33,12 @@ export async function promiseConcat(promises: Array<Promise<unknown>>): Promise<
   for (const promise of promises) {
     await promise
   }
+}
+
+export async function doUntil<T>(promise: Promise<unknown>, timeline: Timeline<T>) {
+  return parallel('race', action({ until: promise }), timeline)
+}
+
+export async function* doWhile<T>(update: ActionUpdate<T>, timeline: Timeline<T>) {
+  return parallel('race', action({ update }))
 }

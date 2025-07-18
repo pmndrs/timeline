@@ -10,11 +10,11 @@ const target2 = useRef<Mesh>(null)
 useTimeline(async function* () {
   while (true) {
     //transition to look at target2
-    yield* action({ update: lookAt(camera, target1.current!), ease: spring() })
+    yield* action({ update: spring(lookAt(camera, target1.current!)) })
     //wait for 2 seconds
     yield* action({ until: duration(2, 'seconds') })
     //transition to look at target2
-    yield* action({ update: lookAt(camera, target2.current!), ease: spring() })
+    yield* action({ update: spring(lookAt(camera, target2.current!)) })
     //wait for 2 seconds
     yield* action({ until: duration(2, 'seconds') })
   }
@@ -34,6 +34,8 @@ return (
 
 ## Roadmap before Release
 
-[ ] lookAt, rotateArround, moveTo, ...
-[ ] ease configuration
-[ ] target distance configuration (allowing to move towards a target with a certain distance)
+[ ] yield* cleanup(() => ...)
+[ ] lookAt, rotateArround, moveTo, ...  
+[ ] ease configuration  
+[ ] target distance configuration (allowing to move towards a target with a certain distance)  
+[ ] queue with optional priority sorting and cancelation (configure what happens whith the current timeline when canceled)
