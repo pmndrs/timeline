@@ -1,4 +1,17 @@
-import { action, forever, parallel, type ActionUpdate, type Timeline } from '../index.js'
+import { action, forever, parallel, type ReusableTimeline, type ActionUpdate } from '../index.js'
+
+export type StateTransition<T> = {
+  when: Promise<unknown> | ((...params: Parameters<ActionUpdate<T>>) => boolean)
+}
+
+export type StateTransitions<T, S extends string> = {
+  [Key in S]?: StateTransition<T>
+}
+
+export type State<T, S extends string> = {
+  timeline: ReusableTimeline<T, S | undefined | void>
+  transitionTo?: StateTransitions<T, S> & { finally?: S }
+}
 
 export type StateMap<T, S> = { [Key in keyof S]: State<T, keyof S & string> }
 
@@ -6,7 +19,7 @@ export async function* graph<T, S extends object>(initialStateName: keyof S, sta
   let stateName = initialStateName
   while (true) {
     const state = stateMap[stateName]
-    const transitions: Array<Timeline<T>> =
+    const transitions: Array<ReusableTimeline<T>> =
       state.transitionTo == null
         ? []
         : Object.entries<StateTransition<T> | (keyof S & string)>(state.transitionTo)
@@ -24,27 +37,17 @@ export async function* graph<T, S extends object>(initialStateName: keyof S, sta
                 },
             )
     yield* parallel('race', ...transitions, async function* () {
-      const newState = yield* typeof state.timeline == 'function' ? state.timeline() : state.timeline
-      if (newState != null && state.transitionTo?.finally == null) {
-        //if nothing is set for finally, we just do nothing
-        await forever()
-        //this return is just to make typescript happy but this poor return will never be called
+      const newState = yield* state.timeline()
+      if (state.transitionTo?.finally != null) {
+        stateName = state.transitionTo.finally
         return
       }
-      stateName = newState ?? state.transitionTo!.finally!
+      if (newState != null) {
+        stateName = newState
+        return
+      }
+      //if nothing is set for finally, we just do nothing
+      await forever()
     })
   }
-}
-
-export type StateTransitions<T, S extends string> = {
-  [Key in S]?: StateTransition<T>
-}
-
-export type StateTransition<T> = {
-  when: Promise<unknown> | ActionUpdate<T>
-}
-
-export type State<T, S extends string> = {
-  timeline: Timeline<T, S | undefined | void>
-  transitionTo?: StateTransitions<T, S> & { finally?: S }
 }

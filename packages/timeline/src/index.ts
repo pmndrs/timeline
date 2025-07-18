@@ -1,10 +1,11 @@
 export type Action<T> = {
+  readonly init?: () => void
   readonly update?: ActionUpdate<T>
   readonly until?: Promise<unknown>
   readonly cleanup?: () => void
 }
 
-export type ActionUpdate<T> = (state: T, clock: ActionClock, easing?: number) => boolean
+export type ActionUpdate<T> = (state: T, clock: ActionClock, easing?: number) => boolean | void | undefined
 
 export type ActionClock = {
   readonly time: number
@@ -18,7 +19,12 @@ export type ReusableTimeline<T, R = any> = () => NonReuseableTimeline<T, R>
 export type NonReuseableTimeline<T, R = any> = AsyncIterable<Action<T>, R>
 
 export async function* action<T>(a: Action<T>): NonReuseableTimeline<T> {
+  a.init?.()
   yield a
+}
+
+export function reuseableAction<T>(a: Action<T>): ReusableTimeline<T> {
+  return () => action(a)
 }
 
 export async function* parallel<T>(
@@ -62,12 +68,18 @@ export function build<T>(timeline: Timeline<T>, abortSignal?: AbortSignal, onErr
 
 export async function* abortable<T>(timeline: Timeline<T>, abortSignal?: AbortSignal) {
   const ref: UpdateRef<T> = {}
-  const timelineFinishedOrAborted = buildAsync(timeline, ref, abortSignal)
+  const abortController = new AbortController()
+  const timelineFinishedOrAborted = buildAsync(
+    timeline,
+    ref,
+    abortSignal != null ? AbortSignal.any([abortSignal, abortController.signal]) : abortController.signal,
+  )
   yield* action<T>({
     update: (state, clock, easing) => {
       ref.current?.(state, clock, easing)
       return true
     },
+    cleanup: abortController.abort.bind(abortController),
     until: timelineFinishedOrAborted,
   })
 }
@@ -94,7 +106,8 @@ async function buildAsync<T>(timeline: Timeline<T>, updateRef: UpdateRef<T>, abo
       let resolveRef!: (value: unknown) => void
       promises.push(new Promise((resolve) => (resolveRef = resolve)))
       updateRef.current = (state, delta) => {
-        if (!actionUpdate(state, delta)) {
+        const shouldContinue = actionUpdate(state, delta) ?? true
+        if (!shouldContinue) {
           resolveRef(undefined)
         }
       }
@@ -102,6 +115,7 @@ async function buildAsync<T>(timeline: Timeline<T>, updateRef: UpdateRef<T>, abo
       promises.push(new Promise(() => {}))
     }
     await Promise.race(promises)
+    action.cleanup?.()
     updateRef.current = undefined
   }
 }

@@ -1,5 +1,5 @@
 import { AnimationAction, AnimationMixer } from 'three'
-import { action, parallel, type ActionUpdate, type Timeline } from '../index.js'
+import { action, parallel, type ReusableTimeline, type ActionUpdate } from '../index.js'
 
 export function timePassed(time: number, unit: 'seconds' | 'milliseconds'): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, unit === 'seconds' ? time * 1000 : time))
@@ -35,10 +35,21 @@ export async function promiseConcat(promises: Array<Promise<unknown>>): Promise<
   }
 }
 
-export async function doUntil<T>(promise: Promise<unknown>, timeline: Timeline<T>) {
-  return parallel('race', action({ until: promise }), timeline)
+export async function doUntil<T>(promise: Promise<unknown>, timeline: ReusableTimeline<T>) {
+  return parallel('race', action({ until: promise }), async function* () {
+    while (true) {
+      yield* timeline()
+    }
+  })
 }
 
-export async function* doWhile<T>(update: ActionUpdate<T>, timeline: Timeline<T>) {
-  return parallel('race', action({ update }))
+export async function* doWhile<T>(
+  update: (...params: Parameters<ActionUpdate<T>>) => boolean,
+  timeline: ReusableTimeline<T>,
+) {
+  return parallel('race', action({ update }), async function* () {
+    while (true) {
+      yield* timeline()
+    }
+  })
 }
