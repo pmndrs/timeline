@@ -23,8 +23,15 @@ export async function* action<T>(a: Action<T>): NonReuseableTimeline<T> {
   yield a
 }
 
-export function reuseableAction<T>(a: Action<T>): ReusableTimeline<T> {
-  return () => action(a)
+export function reuseableAction<T>({
+  until,
+  ...rest
+}: Omit<Action<T>, 'until'> & { readonly until?: () => Promise<unknown> }): ReusableTimeline<T> {
+  return () =>
+    action({
+      ...rest,
+      until: until?.(),
+    })
 }
 
 export async function* parallel<T>(
