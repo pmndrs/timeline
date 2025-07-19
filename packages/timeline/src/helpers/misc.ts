@@ -1,4 +1,4 @@
-import { AnimationAction, AnimationMixer } from 'three'
+import { AnimationAction } from 'three'
 import { action, parallel, type ReusableTimeline, type ActionUpdate } from '../index.js'
 
 export function timePassed(time: number, unit: 'seconds' | 'milliseconds'): Promise<void> {
@@ -12,16 +12,16 @@ export function mediaFinished(media: HTMLAudioElement | HTMLVideoElement) {
   return new Promise<unknown>((resolve) => media.addEventListener('ended', resolve, { once: true }))
 }
 
-export function animationFinished(mixer: AnimationMixer, animation: AnimationAction): Promise<void> {
+export function animationFinished(animation: AnimationAction): Promise<void> {
   return new Promise<void>((resolve) => {
     const listener = ({ action }: { action: AnimationAction }) => {
       if (action != animation) {
         return
       }
-      mixer.removeEventListener('finished', listener)
+      animation.getMixer().removeEventListener('finished', listener)
       resolve()
     }
-    mixer.addEventListener('finished', listener)
+    animation.getMixer().addEventListener('finished', listener)
   })
 }
 
