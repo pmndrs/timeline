@@ -113,6 +113,9 @@ async function buildAsync<T>(timeline: Timeline<T>, updateRef: UpdateRef<T>, abo
     await Promise.race(promises)
     action.cleanup?.()
     updateRef.current = undefined
+    if (abortSignal?.aborted) {
+      return
+    }
   }
 }
 
