@@ -8,7 +8,8 @@ export type Action<T> = {
 export type ActionUpdate<T> = (state: T, clock: ActionClock, easing?: number) => boolean | void | undefined
 
 export type ActionClock = {
-  readonly time: number
+  readonly timelineTime: number
+  readonly actionTime: number
   readonly delta: number
 }
 
@@ -34,11 +35,19 @@ export async function* parallel<T>(
     .map((timeline, i) =>
       buildAsync(typeof timeline === 'function' ? timeline() : timeline, refs[i]!, internalAbortController.signal),
     )
+  const subClocks: Array<{ -readonly [Key in keyof ActionClock]: ActionClock[Key] }> = []
   yield {
     update(state, clock) {
       const length = timelines.length
       for (let i = 0; i < length; i++) {
-        refs[i]!.current?.(state, clock)
+        let subClock = subClocks[i]
+        if (subClock == null) {
+          subClocks[i] = subClock = { actionTime: 0, delta: 0, timelineTime: 0 }
+        }
+        subClock.delta = clock.delta
+        subClock.timelineTime = clock.timelineTime
+        subClock.actionTime += clock.delta
+        refs[i]!.current?.(state, subClock)
       }
       return true
     },
@@ -54,9 +63,10 @@ export type Update<T> = (state: T, delta: number) => void
 export function build<T>(timeline: Timeline<T>, abortSignal?: AbortSignal, onError = console.error): Update<T> {
   const ref: UpdateRef<T> = {}
   buildAsync(timeline, ref, abortSignal).catch(onError)
-  const clock = { delta: 0.00001, time: 0 } satisfies ActionClock
+  const clock = { delta: 0.00001, timelineTime: 0, actionTime: 0 } satisfies ActionClock
   return (state, delta) => {
-    clock.time += delta
+    clock.actionTime += delta
+    clock.timelineTime += delta
     clock.delta = delta
     ref.current?.(state, clock)
   }
@@ -86,7 +96,16 @@ async function buildAsync<T>(timeline: Timeline<T>, updateRef: UpdateRef<T>, abo
   const abortPromise =
     abortSignal != null ? new Promise<unknown>((resolve) => abortSignal.addEventListener('abort', resolve)) : undefined
   timeline = typeof timeline === 'function' ? timeline() : timeline
+  let shouldResetActionTime = false
+  function resetActionTime(clock: ActionClock) {
+    if (!shouldResetActionTime) {
+      return
+    }
+    shouldResetActionTime = false
+    ;(clock as { -readonly [Key in keyof ActionClock]: ActionClock[Key] }).actionTime = 0
+  }
   for await (const action of timeline) {
+    shouldResetActionTime = true
     if (abortSignal?.aborted) {
       return
     }
@@ -96,13 +115,20 @@ async function buildAsync<T>(timeline: Timeline<T>, updateRef: UpdateRef<T>, abo
     }
     if (action.until != null) {
       promises.push(action.until)
-      updateRef.current = action.update
+      updateRef.current =
+        action.update == null
+          ? undefined
+          : (state, clock, easing) => {
+              resetActionTime(clock)
+              action.update?.(state, clock, easing)
+            }
     } else if (action.update != null) {
       const actionUpdate = action.update
       let resolveRef!: (value: unknown) => void
       promises.push(new Promise((resolve) => (resolveRef = resolve)))
-      updateRef.current = (state, delta) => {
-        const shouldContinue = actionUpdate(state, delta) ?? true
+      updateRef.current = (state, clock, easing) => {
+        resetActionTime(clock)
+        const shouldContinue = actionUpdate(state, clock, easing) ?? true
         if (!shouldContinue) {
           resolveRef(undefined)
         }

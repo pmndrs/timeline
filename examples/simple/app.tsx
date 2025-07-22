@@ -20,16 +20,7 @@ function Scene() {
     while (true) {
       console.log('conting till 10')
       let i = 0
-      yield* parallel(
-        'race',
-        action({
-          update: () => {
-            console.log(i)
-            return i++ < 10
-          },
-        }),
-        action({ until: forever() }),
-      )
+      yield* parallel('race', action({ update: () => i++ < 10 }), action({ until: forever() }))
       console.log('waiting 1 second')
       yield* action({ until: timePassed(1, 'seconds') })
     }
