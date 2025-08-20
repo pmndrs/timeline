@@ -2,6 +2,7 @@
   "type": "module",
   "dependencies": {
     "@react-three/fiber": "^9.2.0",
+    "@react-three/drei": "10.7.3",
     "@react-three/timeline": "workspace:^",
     "@vitejs/plugin-react": "^4.6.0",
     "react": "^19.1.0",

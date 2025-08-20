@@ -1,11 +1,15 @@
 export type Action<T> = {
   readonly init?: () => void
-  readonly update?: ActionUpdate<T>
+  readonly update?: ActionUpdate<T> | Array<ActionUpdate<T>>
   readonly until?: Promise<unknown>
   readonly cleanup?: () => void
 }
 
-export type ActionUpdate<T> = (state: T, clock: ActionClock, easing?: number) => boolean | void | undefined
+/**
+ * @returns true if the action update should continue (default)
+ * @returns false if the action update should not continue
+ */
+export type ActionUpdate<T> = (state: T, clock: ActionClock) => boolean | void | undefined
 
 export type ActionClock = {
   readonly timelineTime: number
@@ -81,8 +85,8 @@ export async function* abortable<T>(timeline: Timeline<T>, abortSignal?: AbortSi
     abortSignal != null ? AbortSignal.any([abortSignal, abortController.signal]) : abortController.signal,
   )
   yield* action<T>({
-    update: (state, clock, easing) => {
-      ref.current?.(state, clock, easing)
+    update: (state, clock) => {
+      ref.current?.(state, clock)
       return true
     },
     cleanup: abortController.abort.bind(abortController),
@@ -118,17 +122,17 @@ async function buildAsync<T>(timeline: Timeline<T>, updateRef: UpdateRef<T>, abo
       updateRef.current =
         action.update == null
           ? undefined
-          : (state, clock, easing) => {
+          : (state, clock) => {
               resetActionTime(clock)
-              action.update?.(state, clock, easing)
+              executeActionUpdates(state, clock, action.update)
             }
     } else if (action.update != null) {
       const actionUpdate = action.update
       let resolveRef!: (value: unknown) => void
       promises.push(new Promise((resolve) => (resolveRef = resolve)))
-      updateRef.current = (state, clock, easing) => {
+      updateRef.current = (state, clock) => {
         resetActionTime(clock)
-        const shouldContinue = actionUpdate(state, clock, easing) ?? true
+        const shouldContinue = executeActionUpdates(state, clock, actionUpdate) ?? true
         if (!shouldContinue) {
           resolveRef(undefined)
         }
@@ -145,5 +149,24 @@ async function buildAsync<T>(timeline: Timeline<T>, updateRef: UpdateRef<T>, abo
   }
 }
 
+function executeActionUpdates<T>(
+  state: T,
+  clock: ActionClock,
+  updates: Action<T>['update'],
+): ReturnType<ActionUpdate<T>> {
+  if (!Array.isArray(updates)) {
+    return updates?.(state, clock)
+  }
+  let shouldContinue = undefined
+  for (const update of updates) {
+    const newShouldContinue = update(state, clock)
+    if (shouldContinue == null || (shouldContinue === false && newShouldContinue === true)) {
+      shouldContinue = newShouldContinue
+    }
+  }
+  return shouldContinue
+}
+
 export * from './helpers/index.js'
-//export * from './ease.js'
+export * from './ease.js'
+export * from './transition.js'

@@ -9,7 +9,7 @@ const target2 = useRef<Mesh>(null)
 
 useTimeline(async function* () {
   while (true) {
-    //transition to look at target2
+    //transition to look at target1
     yield* action({ update: spring(lookAt(camera, target1.current!)) })
     //wait for 2 seconds
     yield* action({ until: duration(2, 'seconds') })
