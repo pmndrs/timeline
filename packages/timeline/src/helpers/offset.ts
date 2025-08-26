@@ -1,5 +1,5 @@
-export function distanceOffset() {}
+export function offsetDistance() {}
 
-export function rotationOffset() {}
-
-export function positionOffset() {}
+// Returns the heading (yaw) angle in radians from fromPosition to toPosition on the XZ plane.
+// toQuaternion is currently unused, but kept for API compatibility.
+export function offsetRotation(): number {}

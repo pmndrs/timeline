@@ -15,6 +15,7 @@ export type ActionClock = {
   readonly timelineTime: number
   readonly actionTime: number
   readonly delta: number
+  readonly prevDelta: number | undefined
 }
 
 export type Timeline<T, R = any> = ReusableTimeline<T, R> | NonReuseableTimeline<T, R>
@@ -46,9 +47,10 @@ export async function* parallel<T>(
       for (let i = 0; i < length; i++) {
         let subClock = subClocks[i]
         if (subClock == null) {
-          subClocks[i] = subClock = { actionTime: 0, delta: 0, timelineTime: 0 }
+          subClocks[i] = subClock = { actionTime: 0, delta: 0, prevDelta: 0, timelineTime: 0 }
         }
         subClock.delta = clock.delta
+        subClock.prevDelta = clock.prevDelta
         subClock.timelineTime = clock.timelineTime
         subClock.actionTime += clock.delta
         refs[i]!.current?.(state, subClock)
@@ -67,11 +69,12 @@ export type Update<T> = (state: T, delta: number) => void
 export function build<T>(timeline: Timeline<T>, abortSignal?: AbortSignal, onError = console.error): Update<T> {
   const ref: UpdateRef<T> = {}
   buildAsync(timeline, ref, abortSignal).catch(onError)
-  const clock = { delta: 0.00001, timelineTime: 0, actionTime: 0 } satisfies ActionClock
+  const clock = { delta: undefined as any, prevDelta: undefined, timelineTime: 0, actionTime: 0 } satisfies ActionClock
   return (state, delta) => {
     clock.actionTime += delta
     clock.timelineTime += delta
-    clock.delta = delta
+    clock.prevDelta = clock.delta
+    clock.delta = Math.min(delta, 1 / 30)
     ref.current?.(state, clock)
   }
 }

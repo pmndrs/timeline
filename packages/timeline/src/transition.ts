@@ -19,11 +19,40 @@ const quaternionHelper = new Quaternion()
 const quaternionHelperInverse = new Quaternion()
 const matrixHelper = new Matrix4()
 const invertedMatrixHelper = new Matrix4()
+const eulerHelper = new Euler()
 
-export function worldSpace(type: 'position' | 'scale' | 'quaternion', forObject: Object3D, offset?: Array<number>) {
+function copyArray(from: Array<number>, into: Array<number>): void {
+  const count = from.length
+  for (let i = 0; i < count; i++) into[i] = from[i]
+}
+
+export type WorldSpaceResults = {
+  position: Vector3
+  scale: Vector3
+  quaternion: Quaternion
+  euler: Euler
+}
+
+function cacheFunction<T>(object: Object3D, key: string, offset: any, value: T): T {
+  if (offset != null) {
+    return value
+  }
+  Object.assign(object, { [key]: value })
+  return value
+}
+
+export function worldSpace<Type extends keyof WorldSpaceResults>(
+  type: Type,
+  forObject: Object3D,
+  offset?: Array<number>,
+): (newValue?: Array<number>) => Array<number> | WorldSpaceResults[Type] {
+  const key = `cachedGetWorldSpace${type}`
+  if (offset == null && key in forObject) {
+    return (forObject as any)[key]
+  }
   if (type === 'position') {
     const result = new Vector3()
-    return (newValue?: Array<number>) => {
+    return cacheFunction(forObject, key, offset, (newValue?: Array<number>) => {
       if (newValue != null) {
         // location = parentWorldMatrix-1 * worldPosition
         forObject.position.fromArray(newValue)
@@ -36,12 +65,12 @@ export function worldSpace(type: 'position' | 'scale' | 'quaternion', forObject:
       if (offset != null) {
         result.add(vectorHelper.fromArray(offset))
       }
-      return result
-    }
+      return result as WorldSpaceResults[Type]
+    })
   }
   if (type === 'quaternion') {
     const result = new Quaternion()
-    return (newValue?: Array<number>) => {
+    return cacheFunction(forObject, key, offset, (newValue?: Array<number>) => {
       if (newValue != null) {
         // localQuaternion = inverse(parentWorldQuaternion) * desiredWorldQuaternion
         const desiredWorldQuaternion = quaternionHelper.fromArray(newValue)
@@ -58,17 +87,40 @@ export function worldSpace(type: 'position' | 'scale' | 'quaternion', forObject:
       if (offset != null) {
         result.multiply(quaternionHelper.fromArray(offset))
       }
-      return result
-    }
+      return result as WorldSpaceResults[Type]
+    })
+  }
+  if (type === 'euler') {
+    const result = new Euler()
+    return cacheFunction(forObject, key, offset, (newValue?: Array<number>) => {
+      if (newValue != null) {
+        // localQuaternion = inverse(parentWorldQuaternion) * desiredWorldQuaternion(from Euler)
+        const desiredWorldQuaternion = quaternionHelper.setFromEuler(eulerHelper.fromArray(newValue as any))
+        if (forObject.parent != null) {
+          forObject.parent.getWorldQuaternion(quaternionHelperInverse)
+        } else {
+          quaternionHelperInverse.identity()
+        }
+        quaternionHelperInverse.invert()
+        forObject.quaternion.copy(quaternionHelperInverse.multiply(desiredWorldQuaternion))
+        return newValue
+      }
+      forObject.getWorldQuaternion(quaternionHelper)
+      if (offset != null) {
+        quaternionHelper.multiply(new Quaternion().setFromEuler(eulerHelper.fromArray(offset as any)))
+      }
+      result.setFromQuaternion(quaternionHelper)
+      return result as WorldSpaceResults[Type]
+    })
   }
   const result = new Vector3()
-  return (newValue?: Array<number>) => {
+  return cacheFunction(forObject, key, offset, (newValue?: Array<number>) => {
     if (newValue == null) {
       forObject.getWorldScale(result)
       if (offset != null) {
         result.multiply(vectorHelper.fromArray(offset))
       }
-      return result
+      return result as WorldSpaceResults[Type]
     }
 
     if (forObject.parent == null) {
@@ -84,7 +136,7 @@ export function worldSpace(type: 'position' | 'scale' | 'quaternion', forObject:
     matrixHelper.premultiply(invertedMatrixHelper.copy(forObject.parent.matrixWorld).invert())
     matrixHelper.decompose(vectorHelper, quaternionHelper, forObject.scale)
     return newValue
-  }
+  })
 }
 
 function write(value: Array<number>, into: TransitionFrom | ((newValue?: Array<number>) => void)): void {
@@ -134,7 +186,6 @@ export function transition<T>(
   const current = [...goal]
   let target: Array<number> | undefined
   let prev: Array<number> | undefined = transitionPrevMap.get(from)
-  const length = goal.length
   return (state, clock) => {
     read(to, goal)
     read(from, current)
@@ -147,9 +198,7 @@ export function transition<T>(
     const shouldContinue = ease(state, clock, prev, current, goal, target)
     //build preview (create and fill with current)
     prev ??= [...current]
-    for (let i = 0; i < length; i++) {
-      prev[i] = current[i]
-    }
+    copyArray(current, prev)
     write(target, from)
     if (shouldContinue === false) {
       transitionPrevMap.set(from, prev)

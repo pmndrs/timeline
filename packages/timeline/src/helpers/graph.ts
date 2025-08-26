@@ -29,9 +29,7 @@ export async function* graph<T, S extends object>(initialStateName: keyof S, sta
                 async function* () {
                   const when = transitionCondition.when
                   yield* action(
-                    typeof when === 'function'
-                      ? { update: (state, clock, options) => !when(state, clock, options) }
-                      : { until: when },
+                    typeof when === 'function' ? { update: (state, clock) => !when(state, clock) } : { until: when },
                   )
                   stateName = transitionStateName
                 },

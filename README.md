@@ -34,8 +34,8 @@ return (
 
 ## Roadmap before Release
 
+[ ] lookAt, offsetDistance, offsetRotation
+[ ] record, useRecordedTimeline, ... => allows to bind the timeline progress to any controls (e.g. scrolling)
 [ ] yield* cleanup(() => ...)
-[ ] lookAt, rotateArround, moveTo, ...  
-[ ] ease configuration  
-[ ] target distance configuration (allowing to move towards a target with a certain distance)  
+[ ] add external methods for the graph (set/get state externally)
 [ ] queue with optional priority sorting and cancelation (configure what happens whith the current timeline when canceled)
