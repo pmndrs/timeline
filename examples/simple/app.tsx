@@ -1,77 +1,56 @@
-import { Environment, PerspectiveCamera } from '@react-three/drei'
+import { Environment, Text } from '@react-three/drei'
 import { Canvas, useThree } from '@react-three/fiber'
-import {
-  useTimeline,
-  action,
-  lookAt,
-  offsetDistance,
-  offsetRotation,
-  velocity,
-  spring,
-  springPresets,
-} from '@react-three/timeline'
+import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing'
+import { useTimeline, action, lookAt, spring } from '@react-three/timeline'
 import { useRef } from 'react'
-import { Mesh, PerspectiveCamera as PerspectiveCameraImpl } from 'three'
+import { Mesh } from 'three'
 
 export function App() {
   return (
     <Canvas>
-      <group position-y={0}>
-        <PerspectiveCamera position={[0, 0, 0]} makeDefault />
-      </group>
-      <Environment preset="apartment" background />
+      <EffectComposer>
+        <Bloom luminanceThreshold={0} luminanceSmoothing={0.9} height={300} />
+        <Vignette eskil={false} offset={0.1} darkness={1.1} />
+      </EffectComposer>
+      <Environment
+        backgroundIntensity={0.1}
+        backgroundRotation={[0, (90 / 180) * Math.PI, 0]}
+        preset="studio"
+        background
+        blur={0.1}
+      />
       <Scene />
     </Canvas>
   )
 }
 
 function Scene() {
-  const camera = useThree((s) => s.camera) as PerspectiveCameraImpl
-  const target1Ref = useRef<Mesh>(null)
-  const target2Ref = useRef<Mesh>(null)
-  const scaleRef = useRef<Mesh>(null)
+  const camera = useThree((s) => s.camera)
+  const redPill = useRef<Mesh>(null)
+  const bluePill = useRef<Mesh>(null)
 
-  useTimeline(
-    async function* () {
-      yield* action({
-        update: [
-          offsetRotation(camera, target1Ref.current!, [0, (3 * Math.PI) / 2, 0]),
-          offsetDistance(camera, target1Ref.current!, 10),
-          lookAt(camera, target1Ref.current!),
-        ],
-      })
-      while (true) {
-        for (let i = 0; i < 4; i++) {
-          yield* action({
-            update: [
-              offsetRotation(
-                camera,
-                target1Ref.current!,
-                [0, (i * Math.PI) / 2, 0],
-                i % 4 == 3 ? spring({ ...springPresets.stiff, maxVelocity: 5 }) : velocity(5, 2),
-              ),
-              lookAt(camera, target1Ref.current!),
-            ],
-          })
-        }
-      }
-    },
-    [camera],
-  )
+  useTimeline(async function* () {
+    while (true) {
+      //transition to look at target1
+      yield* action({ update: lookAt(camera, redPill.current!, spring()) })
+      //transition to look at target2
+      yield* action({ update: lookAt(camera, bluePill.current!, spring()) })
+    }
+  }, [])
 
   return (
-    <group position-x={0} rotation-z={0} scale={0.5}>
-      <mesh position-x={-1} ref={target1Ref}>
-        <boxGeometry />
-        <meshPhysicalMaterial color="red" />
-      </mesh>
-      <mesh position-x={10} ref={target2Ref}>
+    <>
+      <Text position-y={1} scale={0.3}>
+        Remember: all I'm offering is the truth. Nothing more.
+      </Text>
+      <mesh position-y={-1} position-x={-2} rotation-y={(-30 / 180) * Math.PI} scale={0.2} scale-z={0.4} ref={redPill}>
         <sphereGeometry />
+        <meshPhysicalMaterial emissive="red" emissiveIntensity={0.5} color="red" />
       </mesh>
-      <mesh rotation-z={(40 / 180) * Math.PI} scale={3} position-x={4} ref={scaleRef}>
-        <boxGeometry />
-        <meshPhysicalMaterial color="green" />
+      <mesh position-y={-1} position-x={2} rotation-y={(20 / 180) * Math.PI} scale={0.2} scale-z={0.4} ref={bluePill}>
+        <sphereGeometry />
+        <meshPhysicalMaterial emissive="blue" emissiveIntensity={5} color="blue" />
       </mesh>
-    </group>
+    </>
   )
 }
