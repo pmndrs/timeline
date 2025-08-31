@@ -1,4 +1,4 @@
-import { action, forever, parallel, type ReusableTimeline, type ActionUpdate } from '../index.js'
+import { action, forever, parallel, type ReusableTimeline, type ActionUpdate } from './index.js'
 
 export type StateTransition<T> = {
   when: Promise<unknown> | ((...params: Parameters<ActionUpdate<T>>) => boolean)

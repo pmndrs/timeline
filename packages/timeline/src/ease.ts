@@ -1,127 +1,139 @@
-import type { ActionUpdate } from './index.js'
+import { MathUtils, Quaternion, Vector3 } from 'three'
+import type { ActionClock, ActionUpdate } from './index.js'
 
 export type EaseFunction<T> = (
   ...params: [
     ...Parameters<ActionUpdate<T>>,
-    prev: Array<number> | undefined,
-    current: Array<number>,
-    goal: Array<number>,
-    target: Array<number>,
+    prev: Vector3 | Quaternion | undefined,
+    current: Vector3 | Quaternion,
+    goal: Vector3 | Quaternion,
+    target: Vector3 | Quaternion,
   ]
 ) => ReturnType<ActionUpdate<T>>
 
-function length(value: Array<number>): number {
-  let sumOfSquares = 0
-  const count = value.length
-  for (let i = 0; i < count; i++) {
-    const component = value[i]
-    sumOfSquares += component * component
-  }
-  return Math.sqrt(sumOfSquares)
-}
-function add(target: Array<number>, v1: Array<number>, v2: Array<number>): void {
-  const count = Math.max(target.length, v1.length, v2.length)
-  for (let i = 0; i < count; i++) {
-    target[i] = v1[i] + v2[i]
-  }
-}
-function sub(target: Array<number>, v1: Array<number>, v2: Array<number>): void {
-  const count = Math.max(target.length, v1.length, v2.length)
-  for (let i = 0; i < count; i++) {
-    target[i] = v1[i] - v2[i]
-  }
-}
-function multiplyScalar(target: Array<number>, value: Array<number>, scalar: number) {
-  const count = Math.max(target.length, value.length)
-  for (let i = 0; i < count; i++) {
-    target[i] = value[i] * scalar
-  }
-}
+const offsetQuaternion = new Quaternion()
+const offsetTangent = new Vector3()
+const deltaTangent = new Vector3()
+const deltaQuaternion = new Quaternion()
+const prevOffsetQuaternion = new Quaternion()
+const prevOffsetTangent = new Vector3()
 
-function copy(target: Array<number>, source: Array<number>): void {
-  const count = source.length
-  for (let i = 0; i < count; i++) target[i] = source[i]
-}
-
-function addScaled(target: Array<number>, v1: Array<number>, s1: number, v2: Array<number>, s2: number): void {
-  const count = Math.max(target.length, v1.length, v2.length)
-  for (let i = 0; i < count; i++) target[i] = v1[i] * s1 + v2[i] * s2
-}
-
-function distanceTo(v1: Array<number>, v2: Array<number>): number {
-  let sumOfSquares = 0
-  const count = Math.max(v1.length, v2.length)
-  for (let i = 0; i < count; i++) {
-    const diff = v1[i] - v2[i]
-    sumOfSquares += diff * diff
-  }
-  return Math.sqrt(sumOfSquares)
-}
+const offsetVector = new Vector3()
+const prevOffsetVector = new Vector3()
+const deltaVector = new Vector3()
 
 export function velocity(velocity: number, maxAcceleration?: number): EaseFunction<unknown> {
-  // Preallocate working arrays to avoid per-frame allocations
-  let offsetVec: Array<number> = []
-  let desiredVelocityVec: Array<number> = []
-  let currentVelocityVec: Array<number> = []
-  let deltaVelocityVec: Array<number> = []
-  let stepVec: Array<number> = []
-
   return (_state, clock, prev, current, goal, target) => {
-    // compute the offset between current and goal
-    sub(offsetVec, goal, current)
-    const offsetLength = length(offsetVec)
+    if (current instanceof Quaternion) {
+      offsetQuaternion
+        .copy(current)
+        .invert()
+        .premultiply(goal as Quaternion)
+      quaternionToTangentSpace(offsetQuaternion, offsetTangent)
 
-    // if already at goal, stop
-    if (offsetLength === 0) {
-      copy(target, current)
-      return false
-    }
-
-    // desired velocity vector points toward goal with magnitude "velocity"
-    multiplyScalar(desiredVelocityVec, offsetVec, velocity / offsetLength)
-
-    // compute current velocity vector from previous position
-    if (prev != null && clock.prevDelta != null) {
-      sub(currentVelocityVec, current, prev)
-      multiplyScalar(currentVelocityVec, currentVelocityVec, 1 / clock.prevDelta)
-    } else {
-      // no previous sample; assume zero velocity
-      multiplyScalar(currentVelocityVec, current, 0)
-    }
-
-    // accelerate towards desired velocity, limiting acceleration magnitude if requested
-    if (maxAcceleration != null) {
-      sub(deltaVelocityVec, desiredVelocityVec, currentVelocityVec)
-      const maxDeltaVelocity = maxAcceleration * clock.delta
-      const deltaLen = length(deltaVelocityVec)
-      if (deltaLen > 0) {
-        const scale = Math.min(1, maxDeltaVelocity / deltaLen)
-        multiplyScalar(deltaVelocityVec, deltaVelocityVec, scale)
-        add(currentVelocityVec, currentVelocityVec, deltaVelocityVec)
+      let prevCurrentOffset: Vector3 | undefined
+      if (prev != null && clock.prevDelta != null) {
+        prevOffsetQuaternion
+          .copy(prev as Quaternion)
+          .invert()
+          .premultiply(current)
+        quaternionToTangentSpace(prevOffsetQuaternion, prevOffsetTangent)
+        prevCurrentOffset = prevOffsetTangent
       }
-    } else {
-      // snap directly to desired velocity when no acceleration cap is provided
-      copy(currentVelocityVec, desiredVelocityVec)
+
+      let shouldContinue = velocityEaseComputeDelta(
+        velocity,
+        maxAcceleration,
+        clock,
+        offsetTangent,
+        prevCurrentOffset,
+        deltaTangent,
+      )
+
+      tangentSpaceToQuaternion(deltaTangent, deltaQuaternion)
+      ;(target as Quaternion).multiplyQuaternions(current, deltaQuaternion)
+      return shouldContinue
     }
 
-    // integrate position: x_next = x + v * dt
-    multiplyScalar(stepVec, currentVelocityVec, clock.delta)
-    add(target, current, stepVec)
+    offsetVector.subVectors(goal, current)
+    let prevCurrentOffset: Vector3 | undefined
+    if (prev != null && clock.prevDelta != null) {
+      prevOffsetVector.subVectors(current, prev)
+      prevCurrentOffset = prevOffsetVector
+    }
 
-    if (offsetLength <= length(stepVec)) return false
-    return true
+    let shouldContinue = velocityEaseComputeDelta(
+      velocity,
+      maxAcceleration,
+      clock,
+      offsetVector,
+      prevCurrentOffset,
+      deltaVector,
+    )
+
+    ;(target as Vector3).addVectors(current, deltaVector)
+    return shouldContinue
   }
+}
+
+const velocityVector = new Vector3()
+const accelerationVector = new Vector3()
+
+function velocityEaseComputeDelta(
+  velocity: number,
+  maxAcceleration: number | undefined,
+  clock: ActionClock,
+  currentGoalOffset: Vector3,
+  prevCurrentOffset: Vector3 | undefined,
+  target: Vector3,
+): boolean {
+  const currentGoalOffsetLength = currentGoalOffset.length()
+  if (prevCurrentOffset != null && clock.prevDelta != null && prevCurrentOffset.length() > 1e-8) {
+    velocityVector.copy(prevCurrentOffset).divideScalar(clock.prevDelta)
+  } else {
+    velocityVector.set(0, 0, 0)
+  }
+
+  if (currentGoalOffsetLength < 1e-8) {
+    target.copy(velocityVector).multiplyScalar(clock.delta)
+    return false
+  }
+
+  //acceleration = (goalVelocity - currentVelocity) / clock.delta
+  accelerationVector
+    .copy(currentGoalOffset)
+    .divideScalar(currentGoalOffsetLength)
+    .multiplyScalar(velocity)
+    .sub(velocityVector)
+    .divideScalar(clock.delta)
+  const accelerationLength = accelerationVector.length()
+  if (maxAcceleration != null && accelerationLength > 1e-8) {
+    accelerationVector.divideScalar(accelerationLength).multiplyScalar(Math.min(maxAcceleration, accelerationLength))
+  }
+  velocityVector.addScaledVector(accelerationVector, clock.delta)
+  target.copy(velocityVector).multiplyScalar(clock.delta)
+  if (target.length() >= currentGoalOffsetLength) {
+    //prevents overshooting
+    return false
+  }
+  return true
 }
 
 // Time-based easing that moves at a constant rate over a specified duration
 export function time(duration: number): EaseFunction<unknown> {
   return (_state, clock, _prev, current, goal, target) => {
-    sub(target, goal, current)
-    multiplyScalar(target, target, Math.min(1, clock.delta / duration))
+    //0 means only current and 1 means only goal
+    const slerpValue = Math.min(1, clock.delta / duration)
+    if (target instanceof Vector3) {
+      target
+        .set(0, 0, 0)
+        .addScaledVector(current as Vector3, 1 - slerpValue)
+        .addScaledVector(goal as Vector3, slerpValue)
+    } else {
+      target.copy(current as Quaternion).slerp(goal as Quaternion, slerpValue)
+    }
 
     duration -= Math.min(duration, clock.delta)
-
-    add(target, current, target)
 
     if (duration <= 0) {
       return false
@@ -142,55 +154,140 @@ export function spring(
   const stiffness = config.stiffness
   const damping = config.daming
 
-  // Preallocate working arrays to avoid per-frame allocations
-  let displacement: Array<number> = []
-  let velocityVec: Array<number> = []
-  let tmp: Array<number> = []
-  let accelerationVector: Array<number> = []
-  let vNext: Array<number> = []
-
   return (_state, clock, prev, current, goal, target) => {
-    // displacement x = current - goal
-    sub(displacement, current, goal)
+    if (current instanceof Quaternion) {
+      offsetQuaternion
+        .copy(current)
+        .invert()
+        .premultiply(goal as Quaternion)
+      quaternionToTangentSpace(offsetQuaternion, offsetTangent)
 
-    // calculate velocity into velocityVec = (current - prev) / prevDeltaTime
-    if (prev != null && clock.prevDelta != null) {
-      sub(tmp, current, prev)
-      multiplyScalar(velocityVec, tmp, 1 / clock.prevDelta)
-    } else {
-      multiplyScalar(velocityVec, current, 0)
-    }
-
-    // acceleration a = (-k x - c v) / m
-    addScaled(accelerationVector, displacement, -stiffness / mass, velocityVec, -damping / mass)
-
-    // integrate velocity and position (semi-implicit Euler)
-    addScaled(vNext, velocityVec, 1, accelerationVector, clock.delta)
-
-    // cap max velocity if provided
-    if (config.maxVelocity != null) {
-      const vNextLen = length(vNext)
-      if (vNextLen > config.maxVelocity) {
-        multiplyScalar(vNext, vNext, vNextLen === 0 ? 0 : config.maxVelocity / vNextLen)
+      let prevCurrentOffset: Vector3 | undefined
+      if (prev != null && clock.prevDelta != null) {
+        prevOffsetQuaternion
+          .copy(prev as Quaternion)
+          .invert()
+          .premultiply(current)
+        quaternionToTangentSpace(prevOffsetQuaternion, prevOffsetTangent)
+        prevCurrentOffset = prevOffsetTangent
       }
+
+      let shouldContinue = springEaseComputeDelta(
+        mass,
+        stiffness,
+        damping,
+        config.maxVelocity,
+        clock,
+        offsetTangent,
+        prevCurrentOffset,
+        deltaTangent,
+      )
+
+      tangentSpaceToQuaternion(deltaTangent, deltaQuaternion)
+      ;(target as Quaternion).multiplyQuaternions(current, deltaQuaternion)
+      return shouldContinue
     }
 
-    // next position: current + vNext * dt
-    addScaled(target, current, 1, vNext, clock.delta)
-
-    const distance = length(displacement)
-    const speed = length(velocityVec)
-
-    if (distance < 0.01 && speed < 0.01) {
-      copy(target, goal)
-      return false
+    offsetVector.subVectors(goal, current)
+    let prevCurrentOffset: Vector3 | undefined
+    if (prev != null && clock.prevDelta != null) {
+      prevOffsetVector.subVectors(current, prev)
+      prevCurrentOffset = prevOffsetVector
     }
-    return true
+
+    let shouldContinue = springEaseComputeDelta(
+      mass,
+      stiffness,
+      damping,
+      config.maxVelocity,
+      clock,
+      offsetVector,
+      prevCurrentOffset,
+      deltaVector,
+    )
+
+    ;(target as Vector3).addVectors(current, deltaVector)
+    return shouldContinue
   }
 }
 
 export const springPresets = {
-  gentle: { mass: 1, stiffness: 120, daming: 14 },
+  gentle: { mass: 1, stiffness: 10, daming: 14 },
   wobbly: { mass: 1, stiffness: 180, daming: 12 },
   stiff: { mass: 1, stiffness: 300, daming: 20 },
+}
+
+const springVelocityVector = new Vector3()
+const springAccelerationVector = new Vector3()
+
+function springEaseComputeDelta(
+  mass: number,
+  stiffness: number,
+  damping: number,
+  maxVelocity: number | undefined,
+  clock: ActionClock,
+  currentGoalOffset: Vector3,
+  prevCurrentOffset: Vector3 | undefined,
+  target: Vector3,
+): boolean {
+  if (prevCurrentOffset != null && clock.prevDelta != null && prevCurrentOffset.length() > 1e-8) {
+    springVelocityVector.copy(prevCurrentOffset).divideScalar(clock.prevDelta)
+  } else {
+    springVelocityVector.set(0, 0, 0)
+  }
+
+  // a = (k x - c v) / m  where x = goal - current
+  springAccelerationVector
+    .copy(currentGoalOffset)
+    .multiplyScalar(stiffness / mass)
+    .addScaledVector(springVelocityVector, -damping / mass)
+
+  // v = v + a * dt (semi-implicit Euler)
+  springVelocityVector.addScaledVector(springAccelerationVector, clock.delta)
+
+  // cap max velocity if provided
+  if (maxVelocity != null) {
+    const vLen = springVelocityVector.length()
+    if (vLen > maxVelocity && vLen > 0) {
+      springVelocityVector.multiplyScalar(maxVelocity / vLen)
+    }
+  }
+
+  target.copy(springVelocityVector).multiplyScalar(clock.delta)
+
+  const distance = currentGoalOffset.length()
+  const speed = springVelocityVector.length()
+  if (distance < 0.01 && speed < 0.1) {
+    // snap to goal to prevent long tails
+    target.copy(currentGoalOffset)
+    return false
+  }
+  return true
+}
+
+function quaternionToTangentSpace(quaternion: Quaternion, target: Vector3): void {
+  if (quaternion.w < 0) {
+    quaternion.set(-quaternion.x, -quaternion.y, -quaternion.z, -quaternion.w)
+  }
+  const w = MathUtils.clamp(quaternion.w, -1, 1)
+  target.set(quaternion.x, quaternion.y, quaternion.z)
+  const s = target.length()
+  if (s < 1e-8) {
+    //no rotation
+    target.set(0, 0, 0)
+    return
+  }
+  const theta = Math.acos(w)
+  //nromalize target and multiply by theta (direction = axis, length = angle)
+  target.multiplyScalar(theta / s)
+}
+
+function tangentSpaceToQuaternion(tangent: Vector3, target: Quaternion): void {
+  const theta = tangent.length()
+  if (theta < 1e-8) {
+    target.identity()
+    return
+  }
+  const multiplier = Math.sin(theta) / theta
+  target.set(tangent.x * multiplier, tangent.y * multiplier, tangent.z * multiplier, Math.cos(theta))
 }

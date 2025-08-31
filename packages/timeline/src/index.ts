@@ -169,7 +169,9 @@ function executeActionUpdates<T>(
   }
   return shouldContinue
 }
-
-export * from './helpers/index.js'
+export * from './misc.js'
+export * from './graph.js'
+export * from './look-at.js'
+export * from './offset.js'
 export * from './ease.js'
 export * from './transition.js'
