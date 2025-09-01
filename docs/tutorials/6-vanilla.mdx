@@ -115,7 +115,7 @@ const update = start(mainTimeline())
 // render loop
 let last = performance.now()
 function onFrame(now: number) {
-  const delta = now - last
+  const delta = Math.max(1e-6, Math.min(1/30, Math.max(0, (now - last) / 1000)))
   last = now
   update(undefined, delta)
   composer.render(delta)
@@ -144,7 +144,7 @@ window.addEventListener('resize', onResize)
     <title>Vanilla timeline</title>
   </head>
   <body style="margin:0">
-    <div id="root" style="width:100vw;height:100vh"></div>
+    <div id="root" style="position:absolute; inset: 0; touch-action: none"></div>
     <script type="module" src="/index.ts"></script>
   </body>
 </html>`
@@ -277,7 +277,7 @@ If you use vite (`pnpm add vite`), you can create a `index.html` file, add the f
     <script type="module" src="index.ts"></script>
   </head>
   <body style="margin: 0;">
-    <div id="root" style="width: 100dvw; height: 100dvh;"></div>
+    <div id="root" style="position:absolute; inset: 0; touch-action: none"></div>
   </body>
 </html>
 ```
