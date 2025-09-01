@@ -34,9 +34,9 @@ const bluePill = useRef<Mesh>(null)
 
 useTimeline(async function* () {
   while (true) {
-    //transition to look at target1
+    //transition to look at the red pill
     yield* action({ update: lookAt(camera, redPill.current!, spring()) })
-    //transition to look at target2
+    //transition to look at the blue pill
     yield* action({ update: lookAt(camera, bluePill.current!, spring()) })
   }
 }, [])
