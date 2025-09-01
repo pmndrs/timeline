@@ -74,27 +74,32 @@ scene.add(bluePill)
 
 // text
 const fontLoader = new FontLoader()
-const font = await fontLoader.loadAsync('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json')
-const textGeometry = new TextGeometry("Remember: all I'm offering is the truth. Nothing more.", { font, size: 0.3, depth: 0.02, curveSegments: 8 })
-const textMaterial = new MeshStandardMaterial({ color: 0xcccccc, toneMapped: false })
-const text = new Mesh(textGeometry, textMaterial)
-text.position.set(-4.5, 0.5, 0)
-scene.add(text)
+fontLoader.load(
+  'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json',
+  (font) => {
+    const textGeometry = new TextGeometry("Remember: all I'm offering is the truth. Nothing more.", { font, size: 0.3, depth: 0.02, curveSegments: 8 })
+    const textMaterial = new MeshStandardMaterial({ color: 0xcccccc, toneMapped: false })
+    const text = new Mesh(textGeometry, textMaterial)
+    text.position.set(-4.5, 0.5, 0)
+    scene.add(text)
+  }
+)
 
 // environment
 const url = 'https://raw.githubusercontent.com/pmndrs/drei-assets/456060a26bbeb8fdf79326f224b6d99b8bcce736/hdri/studio_small_03_1k.hdr'
 const rgbe = new RGBELoader()
-const hdr = await rgbe.loadAsync(url)
-const pmrem = new PMREMGenerator(renderer)
-pmrem.compileEquirectangularShader()
-const env = pmrem.fromEquirectangular(hdr)
-scene.environment = env.texture
-scene.background = env.texture
-scene.backgroundRotation.y = (90 / 180) * Math.PI
-scene.backgroundBlurriness = 0.1
-scene.backgroundIntensity = 0.1
-hdr.dispose()
-pmrem.dispose()
+rgbe.load(url, (hdr) => {
+  const pmrem = new PMREMGenerator(renderer)
+  pmrem.compileEquirectangularShader()
+  const env = pmrem.fromEquirectangular(hdr)
+  scene.environment = env.texture
+  scene.background = env.texture
+  scene.backgroundRotation.y = (90 / 180) * Math.PI
+  scene.backgroundBlurriness = 0.1
+  scene.backgroundIntensity = 0.1
+  hdr.dispose()
+  pmrem.dispose()
+})
 
 // timeline
 async function* mainTimeline() {
