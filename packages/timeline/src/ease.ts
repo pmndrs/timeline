@@ -19,6 +19,10 @@ const prevOffsetQuaternion = new Quaternion()
 
 const offsetVector = new Vector3()
 
+/**
+ * action update ease function for easing values according to the target velocity
+ * @param maxAcceleration (optional) can be used to limit the change in velocity
+ */
 export function velocity(velocity: number, maxAcceleration?: number): EaseFunction<unknown> {
   let velocityVector: Vector3 | undefined
 
@@ -105,7 +109,9 @@ function velocityEaseComputeVelocity(
   return true
 }
 
-// Time-based easing that moves at a constant rate over a specified duration
+/**
+ * action update easing function for a linear ease based on the provided duration in seconds
+ */
 export function time(duration: number): EaseFunction<unknown> {
   return (_state, clock, _prev, current, goal, target) => {
     //0 means only current and 1 means only goal
@@ -128,6 +134,10 @@ export function time(duration: number): EaseFunction<unknown> {
   }
 }
 
+/**
+ * action update ease function easing values according to spring physics
+ * @param config allows to configure the physical properties of the spring (available presents are `springPresets.gente`, `springPresets.wobbly`, `springPresets.stiff`) - default is `springPresets.gente`
+ */
 export function spring(
   config: {
     mass: number

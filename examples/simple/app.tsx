@@ -1,7 +1,7 @@
 import { Environment, Text } from '@react-three/drei'
 import { Canvas, useThree } from '@react-three/fiber'
 import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing'
-import { useTimeline, action, lookAt, spring } from '@react-three/timeline'
+import { useTimeline, action, lookAt, spring, springPresets } from '@react-three/timeline'
 import { useRef } from 'react'
 import { Mesh } from 'three'
 
@@ -32,9 +32,9 @@ function Scene() {
   useTimeline(async function* () {
     while (true) {
       //transition to look at target1
-      yield* action({ update: lookAt(camera, redPill.current!, spring()) })
+      yield* action({ update: lookAt(camera, redPill.current!, spring(springPresets.stiff)) })
       //transition to look at target2
-      yield* action({ update: lookAt(camera, bluePill.current!, spring()) })
+      yield* action({ update: lookAt(camera, bluePill.current!, spring(springPresets.stiff)) })
     }
   }, [])
 

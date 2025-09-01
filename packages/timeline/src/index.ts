@@ -24,11 +24,19 @@ export type ReusableTimeline<T, R = any> = () => NonReuseableTimeline<T, R>
 
 export type NonReuseableTimeline<T, R = any> = AsyncIterable<Action<T>, R>
 
+/**
+ * core function for yielding an action used via `yield* action({...})`
+ * allows to run this action `until` a certain event and execute an `update` function until the action is finished
+ */
 export async function* action<T>(a: Action<T>): NonReuseableTimeline<T> {
   a.init?.()
   yield a
 }
 
+/**
+ * function for executing multiple timelines in parallel
+ * @param type when to stop all timelines - either wait for `"all"` or cancel all timelines once the first timeline is done via `"race"`
+ */
 export async function* parallel<T>(
   type: 'all' | 'race',
   ...timelines: Array<Timeline<T> | boolean>
@@ -38,7 +46,7 @@ export async function* parallel<T>(
   const promises = timelines
     .filter((timeline) => typeof timeline != 'boolean')
     .map((timeline, i) =>
-      buildAsync(typeof timeline === 'function' ? timeline() : timeline, refs[i]!, internalAbortController.signal),
+      startAsync(typeof timeline === 'function' ? timeline() : timeline, refs[i]!, internalAbortController.signal),
     )
   const subClocks: Array<{ -readonly [Key in keyof ActionClock]: ActionClock[Key] }> = []
   yield {
@@ -66,9 +74,13 @@ export async function* parallel<T>(
 
 export type Update<T> = (state: T, delta: number) => void
 
-export function build<T>(timeline: Timeline<T>, abortSignal?: AbortSignal, onError = console.error): Update<T> {
+/**
+ * function for starting a timeline
+ * @returns an update function which must be executed every frame with the delta time in seconds
+ */
+export function start<T>(timeline: Timeline<T>, abortSignal?: AbortSignal, onError = console.error): Update<T> {
   const ref: UpdateRef<T> = {}
-  buildAsync(timeline, ref, abortSignal).catch(onError)
+  startAsync(timeline, ref, abortSignal).catch(onError)
   const clock = { delta: undefined as any, prevDelta: undefined, timelineTime: 0, actionTime: 0 } satisfies ActionClock
   return (state, delta) => {
     clock.actionTime += delta
@@ -79,10 +91,13 @@ export function build<T>(timeline: Timeline<T>, abortSignal?: AbortSignal, onErr
   }
 }
 
+/**
+ * a timeline wrapper that allows to make any timeline externally cancelable via an abort signal
+ */
 export async function* abortable<T>(timeline: Timeline<T>, abortSignal?: AbortSignal) {
   const ref: UpdateRef<T> = {}
   const abortController = new AbortController()
-  const timelineFinishedOrAborted = buildAsync(
+  const timelineFinishedOrAborted = startAsync(
     timeline,
     ref,
     abortSignal != null ? AbortSignal.any([abortSignal, abortController.signal]) : abortController.signal,
@@ -99,7 +114,7 @@ export async function* abortable<T>(timeline: Timeline<T>, abortSignal?: AbortSi
 
 type UpdateRef<T> = { current?: (...params: Parameters<ActionUpdate<T>>) => void }
 
-async function buildAsync<T>(timeline: Timeline<T>, updateRef: UpdateRef<T>, abortSignal?: AbortSignal) {
+async function startAsync<T>(timeline: Timeline<T>, updateRef: UpdateRef<T>, abortSignal?: AbortSignal) {
   const abortPromise =
     abortSignal != null ? new Promise<unknown>((resolve) => abortSignal.addEventListener('abort', resolve)) : undefined
   timeline = typeof timeline === 'function' ? timeline() : timeline

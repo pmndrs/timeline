@@ -6,6 +6,13 @@ import type { ActionUpdate, EaseFunction } from './index.js'
 export type TransitionFrom = Exclude<TransitionTo, number | Array<number>>
 export type TransitionTo = Vector3 | Quaternion | Euler | number | Array<number>
 
+/**
+ * action update function for making a src object, position, rotation, scale, number change towards the to value
+ * @param ease allows to ease the value from the current value to the target value
+ * @example ```tsx
+ * transition(property(camera, fov), 90, spring())
+ * ```
+ */
 export function transition<T>(
   from: TransitionFrom | ((newValue?: Vector3 | Quaternion) => TransitionFrom | number),
   to: TransitionTo | (() => TransitionTo),

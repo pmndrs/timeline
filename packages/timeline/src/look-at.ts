@@ -7,6 +7,10 @@ const matrixHelper = new Matrix4()
 const fromHelper = new Vector3()
 const toHelper = new Vector3()
 
+/**
+ * action update function for making a src object or quaternion look from its position towards the `toPosition`
+ * @param ease allows to ease the rotation from the current state to the target position
+ */
 export function lookAt<T>(
   from:
     | {

@@ -1,0 +1,203 @@
+---
+title: Overview over All Functions.
+description: Overview over all types of functions (action update, action until, action update ease)
+nav: 3
+---
+
+## Action Update Ease
+
+### spring
+action update ease function easing values according to spring physics
+#### Parameters
+- \`config\` ({ daming: number; mass: number; maxVelocity?: number; stiffness: number }): allows to configure the physical properties of the spring (available presents are `springPresets.gente`, `springPresets.wobbly`, `springPresets.stiff`) - default is `springPresets.gente`
+#### Returns
+`EaseFunction<unknown>`
+
+### time
+action update easing function for a linear ease based on the provided duration in seconds
+#### Parameters
+- \`duration\` (number)
+#### Returns
+`EaseFunction<unknown>`
+
+### velocity
+action update ease function for easing values according to the target velocity
+#### Parameters
+- \`velocity\` (number)
+- \`maxAcceleration\` (number): (optional) can be used to limit the change in velocity
+#### Returns
+`EaseFunction<unknown>`
+
+## Action Update
+
+### lookAt
+action update function for making a src object or quaternion look from its position towards the `toPosition`
+#### Parameters
+- \`from\` (Object3D<Object3DEventMap> | { position: Vector3 | () => Vector3; rotation: Quaternion | (newValue?: Quaternion) => Quaternion })
+- \`toPosition\` (Vector3 | Object3D<Object3DEventMap> | number[] | () => Vector3 | number[])
+- \`ease\` (EaseFunction<T>): allows to ease the rotation from the current state to the target position
+#### Returns
+`ActionUpdate<T>`
+
+### offsetDistance
+action update function for making a src object or position move away/towards the to position to be at the specified distance
+combined with offsetRotation, this action update describes an exact target position in orbital coordinates
+#### Parameters
+- \`from\` (Vector3 | Object3D<Object3DEventMap> | (newValue?: Vector3) => Vector3)
+- \`to\` (Vector3 | Object3D<Object3DEventMap> | () => Vector3)
+- \`distance\` (number)
+- \`ease\` (EaseFunction<T>): allows to ease the position from the current state to the position with the target distance
+#### Returns
+`ActionUpdate<T>`
+
+### offsetRotation
+action update function for making a src object or position move to a position with the specified rotation offset
+combined with offsetDistance, this action update describes an exact target position in orbital coordinates
+#### Parameters
+- \`from\` (Vector3 | Object3D<Object3DEventMap> | (newValue?: Vector3) => Vector3)
+- \`to\` (Vector3 | Object3D<Object3DEventMap> | () => Vector3)
+- \`rotation\` (Quaternion | Euler | number[] | () => Quaternion | Euler | number[]): the offset rotation in world space
+- \`ease\` (EaseFunction<T>): allows to ease the position from the current state to the position with the target rotation offset
+#### Returns
+`ActionUpdate<T>`
+
+### transition
+action update function for making a src object, position, rotation, scale, number change towards the to value
+#### Parameters
+- \`from\` (TransitionFrom | (newValue?: Vector3 | Quaternion) => number | TransitionFrom)
+- \`to\` (TransitionTo | () => TransitionTo)
+- \`ease\` (EaseFunction<T>): allows to ease the value from the current value to the target value
+#### Returns
+`ActionUpdate<T>`
+
+## Action Until
+
+### animationFinished
+action until function for executing an action until a animation has finished playing
+#### Parameters
+- \`animation\` (AnimationAction)
+#### Returns
+`Promise<void>`
+
+### forever
+action until function for executing an action until forever
+#### Returns
+`Promise<unknown>`
+
+### mediaFinished
+action until function for executing an action until a html media has finished playing
+#### Parameters
+- \`media\` (HTMLAudioElement | HTMLVideoElement)
+#### Returns
+`Promise<unknown>`
+
+### promiseConcat
+action until function for concatenating multiple action until functions
+#### Parameters
+- \`promises\` (Promise<unknown>[])
+#### Returns
+`Promise<void>`
+
+### timePassed
+action until function for executing an action until a certain time has passed
+#### Parameters
+- \`time\` (number)
+- \`unit\` ("seconds" | "milliseconds")
+#### Returns
+`Promise<void>`
+
+## Structural
+
+### abortable
+a timeline wrapper that allows to make any timeline externally cancelable via an abort signal
+#### Parameters
+- \`timeline\` (Timeline<T>)
+- \`abortSignal\` (AbortSignal)
+#### Returns
+`AsyncGenerator<Action<T>, void, any>`
+
+### action
+core function for yielding an action used via `yield* action({...})`
+allows to run this action `until` a certain event and execute an `update` function until the action is finished
+#### Parameters
+- \`a\` (Action<T>)
+#### Returns
+`NonReuseableTimeline<T>`
+
+### doUntil
+function for generating a timeline that executes the inner timelines until a promise is met
+#### Parameters
+- \`promise\` (Promise<unknown>)
+- \`timeline\` (ReusableTimeline<T>)
+#### Returns
+`AsyncGenerator<never, NonReuseableTimeline<T, any>, unknown>`
+
+### doWhile
+function for generating a timeline that executes the inner function while a update function returns true
+#### Parameters
+- \`update\` ((params: [state: T, clock: ActionClock]) => boolean)
+- \`timeline\` (ReusableTimeline<T>)
+#### Returns
+`AsyncGenerator<never, NonReuseableTimeline<T, any>, unknown>`
+
+### graph
+timeline function for building a state graph with transitions as edges
+#### Parameters
+- \`initialStateName\` (keyof S): is the name of the initial state
+- \`stateMap\` (StateMap<T, S>): is the map of states including their transitions to other states
+#### Returns
+`AsyncGenerator<Action<T>, void, any>`
+
+### parallel
+function for executing multiple timelines in parallel
+#### Parameters
+- \`type\` ("all" | "race"): when to stop all timelines - either wait for `"all"` or cancel all timelines once the first timeline is done via `"race"`
+- \`timelines\` ((boolean | Timeline<T, any>)[])
+#### Returns
+`NonReuseableTimeline<T>`
+
+### start
+function for starting a timeline
+#### Parameters
+- \`timeline\` (Timeline<T>)
+- \`abortSignal\` (AbortSignal)
+- \`onError\` ((data: any[]) => void)
+#### Returns
+`Update<T>`
+
+### useTimeline
+hook for running the specified timeline
+#### Parameters
+- \`timeline\` (ReusableTimeline<RootState>)
+- \`deps\` (any[]): tells the hook when to stop the previous timeline and restart the currently provided timeline
+#### Returns
+`void`
+
+### useTimelineGraph
+wrapper hook for building a timeline using a graph with
+#### Parameters
+- \`initialStateName\` (keyof S)
+- \`stateMap\` (StateMap<RootState, S>): containing states and transitions
+- \`deps\` (any[]): to inform the hook when to stop the previous graph and start the currently provided graph
+#### Returns
+`void`
+
+## Misc
+
+### property
+helper function for building a write/read function of any property in an object
+#### Parameters
+- \`object\` ({ [Key in string]: number }): the object from which to read/write a property
+- \`key\` (K): the key of the property from which to read/write inside of the object
+#### Returns
+`(newValue?: Vector3 | Quaternion) => number`
+
+### worldSpace
+helper function for building a write/read function of the position/euler/quaternion/scale for an object in world space
+useful when combined with other action update functions such as lookAt
+#### Parameters
+- \`type\` (Type)
+- \`forObject\` (Object3D)
+- \`offset\` (number[])
+#### Returns
+`(newValue?: any) => WorldSpaceResults[Type]`

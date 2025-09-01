@@ -1,12 +1,16 @@
-import { ReusableTimeline, StateMap, build, graph } from '@pmndrs/timeline'
+import { ReusableTimeline, StateMap, start, graph } from '@pmndrs/timeline'
 import { RootState, useFrame } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 
+/**
+ * hook for running the specified timeline
+ * @param deps tells the hook when to stop the previous timeline and restart the currently provided timeline
+ */
 export function useTimeline(timeline: ReusableTimeline<RootState>, deps: Array<any>): void {
   const updateRef = useRef<(state: RootState, delta: number) => void>(null)
   useEffect(() => {
     const abortController = new AbortController()
-    const update = build(timeline(), abortController.signal)
+    const update = start(timeline(), abortController.signal)
     updateRef.current = update
     return () => {
       abortController.abort()
@@ -17,6 +21,12 @@ export function useTimeline(timeline: ReusableTimeline<RootState>, deps: Array<a
   useFrame((state, delta) => updateRef.current?.(state, delta))
 }
 
+/**
+ * wrapper hook for building a timeline using a graph with
+ * @param initialState
+ * @param stateMap containing states and transitions
+ * @param deps to inform the hook when to stop the previous graph and start the currently provided graph
+ */
 export function useTimelineGraph<S extends object>(
   initialStateName: keyof S,
   stateMap: StateMap<RootState, S>,

@@ -1,10 +1,16 @@
 import { Euler, Matrix4, Object3D, Quaternion, Vector3, type AnimationAction } from 'three'
 import { action, parallel, type ReusableTimeline, type ActionUpdate } from './index.js'
 
+/**
+ * action until function for executing an action until a certain time has passed
+ */
 export function timePassed(time: number, unit: 'seconds' | 'milliseconds'): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, unit === 'seconds' ? time * 1000 : time))
 }
 
+/**
+ * action until function for executing an action until a html media has finished playing
+ */
 export function mediaFinished(media: HTMLAudioElement | HTMLVideoElement) {
   if (media.ended) {
     return Promise.resolve<unknown>(undefined)
@@ -12,6 +18,9 @@ export function mediaFinished(media: HTMLAudioElement | HTMLVideoElement) {
   return new Promise<unknown>((resolve) => media.addEventListener('ended', resolve, { once: true }))
 }
 
+/**
+ * action until function for executing an action until a animation has finished playing
+ */
 export function animationFinished(animation: AnimationAction): Promise<void> {
   return new Promise<void>((resolve) => {
     const listener = ({ action }: { action: AnimationAction }) => {
@@ -25,17 +34,26 @@ export function animationFinished(animation: AnimationAction): Promise<void> {
   })
 }
 
+/**
+ * action until function for executing an action until forever
+ */
 export function forever() {
   return new Promise(() => {})
 }
 
+/**
+ * action until function for concatenating multiple action until functions
+ */
 export async function promiseConcat(promises: Array<Promise<unknown>>): Promise<void> {
   for (const promise of promises) {
     await promise
   }
 }
 
-export async function doUntil<T>(promise: Promise<unknown>, timeline: ReusableTimeline<T>) {
+/**
+ * function for generating a timeline that executes the inner timelines until a promise is met
+ */
+export async function* doUntil<T>(promise: Promise<unknown>, timeline: ReusableTimeline<T>) {
   return parallel('race', action({ until: promise }), async function* () {
     while (true) {
       yield* timeline()
@@ -43,6 +61,9 @@ export async function doUntil<T>(promise: Promise<unknown>, timeline: ReusableTi
   })
 }
 
+/**
+ * function for generating a timeline that executes the inner function while a update function returns true
+ */
 export async function* doWhile<T>(
   update: (...params: Parameters<ActionUpdate<T>>) => boolean,
   timeline: ReusableTimeline<T>,
@@ -60,7 +81,6 @@ const quaternionHelper = new Quaternion()
 const quaternionHelperInverse = new Quaternion()
 const matrixHelper = new Matrix4()
 const invertedMatrixHelper = new Matrix4()
-const eulerHelper = new Euler()
 
 export type WorldSpaceResults = {
   position: Vector3
@@ -77,6 +97,10 @@ function cacheFunction<T>(object: Object3D, key: string, offset: any, value: T):
   return value
 }
 
+/**
+ * helper function for building a write/read function of the position/euler/quaternion/scale for an object in world space
+ * useful when combined with other action update functions such as lookAt
+ */
 export function worldSpace<Type extends keyof WorldSpaceResults>(
   type: Type,
   forObject: Object3D,
@@ -150,6 +174,11 @@ export function worldSpace<Type extends keyof WorldSpaceResults>(
   })
 }
 
+/**
+ * helper function for building a write/read function of any property in an object
+ * @param object the object from which to read/write a property
+ * @param key the key of the property from which to read/write inside of the object
+ */
 export function property<K extends string>(object: { [Key in K]: number }, key: K) {
   return (newValue?: Vector3 | Quaternion) => {
     if (newValue == null) {
@@ -160,19 +189,4 @@ export function property<K extends string>(object: { [Key in K]: number }, key: 
     object[key] = newValue.x
     return newValue.x
   }
-}
-
-export function getOffset(
-  from: Array<number> | Vector3 | (() => Array<number> | Vector3),
-  to: Array<number> | Vector3 | (() => Array<number> | Vector3),
-): Array<number> {
-  const f = typeof from === 'function' ? (from as any)() : from
-  const t = typeof to === 'function' ? (to as any)() : to
-  const fx = Array.isArray(f) ? (f[0] ?? 0) : (f as Vector3).x
-  const fy = Array.isArray(f) ? (f[1] ?? 0) : (f as Vector3).y
-  const fz = Array.isArray(f) ? (f[2] ?? 0) : (f as Vector3).z
-  const tx = Array.isArray(t) ? (t[0] ?? 0) : (t as Vector3).x
-  const ty = Array.isArray(t) ? (t[1] ?? 0) : (t as Vector3).y
-  const tz = Array.isArray(t) ? (t[2] ?? 0) : (t as Vector3).z
-  return [fx - tx, fy - ty, fz - tz]
 }

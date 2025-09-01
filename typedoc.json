@@ -1,0 +1,16 @@
+{
+  "entryPoints": [
+    "./packages/timeline/src/index.ts",
+    "./packages/timeline/src/ease.ts",
+    "./packages/timeline/src/transition.ts",
+    "./packages/timeline/src/graph.ts",
+    "./packages/timeline/src/look-at.ts",
+    "./packages/timeline/src/offset.ts",
+    "./packages/timeline/src/misc.ts",
+    "./packages/react/src/index.ts"
+  ],
+  "exclude": [
+    "**/utils.ts",
+    "**/previous.ts"
+  ]
+}

@@ -4,6 +4,11 @@ import { getPrevious, setPrevious } from './previous.js'
 import { read, write } from './utils.js'
 import type { EaseFunction } from './ease.js'
 
+/**
+ * action update function for making a src object or position move away/towards the to position to be at the specified distance
+ * combined with offsetRotation, this action update describes an exact target position in orbital coordinates
+ * @param ease allows to ease the position from the current state to the position with the target distance
+ */
 export function offsetDistance<T>(
   from: Vector3 | ((newValue?: Vector3) => Vector3) | Object3D,
   to: Vector3 | (() => Vector3) | Object3D,
@@ -77,15 +82,14 @@ export function offsetDistance<T>(
   }
 }
 
-const quaternionHelper = new Quaternion()
-const eulerHelper = new Euler()
-const vectorHelper = new Vector3()
-
 const XVector = new Vector3(1, 0, 0)
 const YVEctor = new Vector3(0, 1, 0)
 
 /**
- * @param rotation in world space
+ * action update function for making a src object or position move to a position with the specified rotation offset
+ * combined with offsetDistance, this action update describes an exact target position in orbital coordinates
+ * @param ease allows to ease the position from the current state to the position with the target rotation offset
+ * @param rotation the offset rotation in world space
  */
 export function offsetRotation<T>(
   from: Vector3 | ((newValue?: Vector3) => Vector3) | Object3D,

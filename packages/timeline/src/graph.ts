@@ -15,6 +15,11 @@ export type State<T, S extends string> = {
 
 export type StateMap<T, S> = { [Key in keyof S]: State<T, keyof S & string> }
 
+/**
+ * timeline function for building a state graph with transitions as edges
+ * @param initialStateName is the name of the initial state
+ * @param stateMap is the map of states including their transitions to other states
+ */
 export async function* graph<T, S extends object>(initialStateName: keyof S, stateMap: StateMap<T, S>) {
   let stateName = initialStateName
   while (true) {

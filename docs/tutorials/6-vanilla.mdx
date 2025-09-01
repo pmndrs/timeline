@@ -1,0 +1,76 @@
+---
+title: Use pmndrs/timeline in vanilla three.js
+description: TBD
+nav: 6
+---
+
+pmndrs/timeline allows to use all the timeline features without react
+
+### Differences to @react-three/uikit
+
+TODO: describe that the difference is that users have to manually call start and need to write the update function with the threejs animation loop
+
+## Building a user interface with `@pmndrs/timeline`
+
+The first step is to install the dependencies.
+
+`npm i three @pmndrs/timeline`
+
+Next, we create the `index.js` file and import the necessary dependencies and setup a threejs scene.
+
+```js
+import { PerspectiveCamera, Scene, WebGLRenderer } from 'three'
+import { start, action, lookAt } from '@pmndrs/timeline'
+
+const camera = new PerspectiveCamera(70, 1, 0.01, 100)
+camera.position.z = 10
+const scene = new Scene()
+const canvas = document.getElementById('root') as HTMLCanvasElement
+const renderer = new WebGLRenderer({ antialias: true, canvas })
+```
+
+```js
+renderer.setAnimationLoop(animation)
+renderer.localClippingEnabled = true
+renderer.setTransparentSort(reversePainterSortStable)
+
+function updateSize() {
+  renderer.setSize(window.innerWidth, window.innerHeight)
+  renderer.setPixelRatio(window.devicePixelRatio)
+  camera.aspect = window.innerWidth / window.innerHeight
+  camera.updateProjectionMatrix()
+}
+
+updateSize()
+window.addEventListener('resize', updateSize)
+
+let prev: number | undefined
+function animation(time: number) {
+  const delta = prev == null ? 0 : time - prev
+  prev = time
+  update(delta)
+  renderer.render(scene, camera)
+}
+```
+
+If you use vite (`npm i vite`), you can create a `index.html` file, add the following content, and run `npx vite`.
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script type="module" src="index.jsx"></script>
+  </head>
+  <body style="margin: 0;">
+    <div id="root" style="width: 100dvw; height: 100dvh;"></div>
+  </body>
+</html>
+```
+
+The result should look like this
+
+
+
