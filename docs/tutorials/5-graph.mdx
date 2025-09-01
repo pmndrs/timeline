@@ -1,7 +1,135 @@
 ---
 title: Building Graph Timelines
-description: TBD
+description: Model behavior as states with transitions driven by time or conditions.
 nav: 5
 ---
 
-TODO: use the introduction timeline, but instead of while(true) switching between the read an blue pill lookAt, use the mouse cursor (transition the graph state to red, when on the left side of the screen and vice verca)
+Graph timelines let you model states and transitions. We'll switch between two states (`red` and `blue`) depending on the mouse position, using promise-based triggers instead of React state.
+
+<Sandpack
+  template="react-ts"
+  customSetup={{
+    dependencies: {
+      'three': 'latest',
+      '@react-three/fiber': '<9',
+      '@react-three/drei': '<10',
+      '@react-three/timeline': 'latest'
+    },
+  }}
+  files={{
+    '/App.tsx': `import { Canvas, useThree } from '@react-three/fiber'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Mesh } from 'three'
+import { useTimelineGraph, action, lookAt, spring, graph, type StateMap } from '@react-three/timeline'
+
+type States = { red: undefined; blue: undefined }
+
+function useMouseX() {
+  const [x, setX] = useState(0)
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => setX(e.clientX / window.innerWidth)
+    window.addEventListener('mousemove', onMove)
+    return () => window.removeEventListener('mousemove', onMove)
+  }, [])
+  return x
+}
+
+function Scene() {
+  const camera = useThree((s) => s.camera)
+  const red = useRef<Mesh>(null)
+  const blue = useRef<Mesh>(null)
+  const mouseX = useMouseX()
+
+  const states = useMemo<StateMap<any, States>>(() => ({
+    red: {
+      timeline: () => action({ update: lookAt(camera, red.current!, spring()) }),
+      transitionTo: {
+        blue: { when: () => mouseX > 0.5 },
+      },
+    },
+    blue: {
+      timeline: () => action({ update: lookAt(camera, blue.current!, spring()) }),
+      transitionTo: {
+        red: { when: () => mouseX <= 0.5 },
+      },
+    },
+  }), [camera, mouseX])
+
+  useTimelineGraph('red', states, [mouseX])
+
+  return (
+    <>
+      <mesh ref={red} position-x={-2} position-y={-1} rotation-y={(-30 / 180) * Math.PI} scale={[0.2, 0.2, 0.4]}>
+        <sphereGeometry />
+        <meshPhysicalMaterial emissive="red" emissiveIntensity={1.5} color="red" />
+      </mesh>
+      <mesh ref={blue} position-x={2} position-y={-1} rotation-y={(20 / 180) * Math.PI} scale={[0.2, 0.2, 0.4]}>
+        <sphereGeometry />
+        <meshPhysicalMaterial emissive="blue" emissiveIntensity={5} color="blue" />
+      </mesh>
+      <ambientLight intensity={0.5} />
+      <directionalLight position={[3,3,3]} intensity={1} />
+    </>
+  )
+}
+
+export default function App() {
+  return (
+    <Canvas>
+      <Scene />
+    </Canvas>
+  )
+}
+`,
+    '/index.tsx': `import { createRoot } from 'react-dom/client'
+import App from './App'
+const root = document.getElementById('root')!
+createRoot(root).render(<App />)
+`
+  }}
+/>
+
+### Key ideas
+
+- Define a `stateMap` with `timeline` for each state and `transitionTo` conditions.
+- Transitions can be driven by promises (e.g., “resolve when mouse is on the right side”).
+
+Extras:
+- You can return a state name from a state's `timeline` to jump programmatically.
+- You can set `transitionTo: { finally: 'someState' }` to always transition after a state's timeline completes.
+
+### Build it in steps
+
+1) Create a reusable promise trigger for either side
+
+```ts
+function mouseOnSide(side: 'left' | 'right'): Promise<void> {
+  return new Promise((resolve) => {
+    function onMove(e: MouseEvent) {
+      const onRight = e.clientX / window.innerWidth > 0.5
+      if ((side === 'right' && onRight) || (side === 'left' && !onRight)) {
+        window.removeEventListener('mousemove', onMove)
+        resolve()
+      }
+    }
+    window.addEventListener('mousemove', onMove)
+  })
+}
+```
+
+2) Start the graph with inline states (no separate variable) and render the scene. The state shape is inferred by `useTimelineGraph`.
+
+```tsx
+useTimelineGraph('red', {
+  red: {
+    timeline: () => action({ update: lookAt(camera, red.current!, spring()) }),
+    transitionTo: { blue: { when: mouseOnSide('right') } },
+  },
+  blue: {
+    timeline: () => action({ update: lookAt(camera, blue.current!, spring()) }),
+    transitionTo: { red: { when: mouseOnSide('left') } },
+  },
+}, [camera])
+```
+
+ 

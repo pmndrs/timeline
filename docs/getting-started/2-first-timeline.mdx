@@ -1,7 +1,159 @@
 ---
 title: Building your First Timeline.
-description: TBD
+description: Step-by-step: create a React scene and orchestrate camera behavior with a timeline.
 nav: 2
 ---
 
-Step by step explanation of building the timeline in introduction.mdx
+This walks you through building the intro example from scratch.
+
+### Final result
+
+<Sandpack
+  template="react-ts"
+  customSetup={{
+    dependencies: {
+      'three': 'latest',
+      '@react-three/fiber': '<9',
+      '@react-three/drei': '<10',
+      '@react-three/timeline': 'latest'
+    },
+  }}
+  files={{
+    '/App.tsx': `import { Canvas, useThree } from '@react-three/fiber'
+import { Text } from '@react-three/drei'
+import { useRef } from 'react'
+import { Mesh } from 'three'
+import { useTimeline, action, lookAt, spring, springPresets } from '@react-three/timeline'
+
+function Scene() {
+  const camera = useThree((s) => s.camera)
+  const red = useRef<Mesh>(null)
+  const blue = useRef<Mesh>(null)
+
+  useTimeline(async function* () {
+    while (true) {
+      yield* action({ update: lookAt(camera, red.current!, spring(springPresets.stiff)) })
+      yield* action({ update: lookAt(camera, blue.current!, spring(springPresets.stiff)) })
+    }
+  }, [])
+
+  return (
+    <>
+      <Text position-y={1} scale={0.3}>Your first timeline</Text>
+      <mesh ref={red} position-x={-2} position-y={-1} rotation-y={(-30 / 180) * Math.PI} scale={[0.2, 0.2, 0.4]}>
+        <sphereGeometry />
+        <meshPhysicalMaterial emissive="red" emissiveIntensity={1.5} color="red" />
+      </mesh>
+      <mesh ref={blue} position-x={2} position-y={-1} rotation-y={(20 / 180) * Math.PI} scale={[0.2, 0.2, 0.4]}>
+        <sphereGeometry />
+        <meshPhysicalMaterial emissive="blue" emissiveIntensity={5} color="blue" />
+      </mesh>
+    </>
+  )
+}
+
+export default function App() {
+  return (
+    <Canvas>
+      <Scene />
+    </Canvas>
+  )
+}
+`,
+    '/index.tsx': `import { createRoot } from 'react-dom/client'
+import App from './App'
+const root = document.getElementById('root')!
+createRoot(root).render(<App />)
+`
+  }}
+/>
+
+### Build it in steps
+
+1) Install
+
+```bash
+pnpm add three @react-three/fiber @react-three/drei @react-three/timeline
+```
+
+2) Minimal scene
+
+Create `App.tsx` and render a scene with two meshes.
+
+3) Add the behavior
+
+We use `useTimeline` to run a generator every frame. Inside it, the `while (true)` loop keeps the sequence going, and each `yield* action({ update: lookAt(...) })` eases the camera toward a target; once the ease completes, the next action starts.
+
+4) The scene shell
+
+```tsx
+// App.tsx
+import { Canvas } from '@react-three/fiber'
+
+export default function App() {
+  return (
+    <Canvas>
+      {/* Add <Scene /> in the next step */}
+    </Canvas>
+  )
+}
+```
+
+5) Add meshes and references
+
+```tsx
+import { useRef } from 'react'
+import { Mesh } from 'three'
+import { Text } from '@react-three/drei'
+
+function Scene() {
+  const red = useRef<Mesh>(null)
+  const blue = useRef<Mesh>(null)
+  return (
+    <>
+      <Text position-y={1} scale={0.3}>Your first timeline</Text>
+      <mesh ref={red} position-x={-2} position-y={-1} rotation-y={(-30/180)*Math.PI} scale={[0.2,0.2,0.4]}>
+        <sphereGeometry />
+        <meshPhysicalMaterial emissive="red" emissiveIntensity={1.5} color="red" />
+      </mesh>
+      <mesh ref={blue} position-x={2} position-y={-1} rotation-y={(20/180)*Math.PI} scale={[0.2,0.2,0.4]}>
+        <sphereGeometry />
+        <meshPhysicalMaterial emissive="blue" emissiveIntensity={5} color="blue" />
+      </mesh>
+    </>
+  )
+}
+```
+
+6) Add the timeline
+
+```tsx
+import { useThree } from '@react-three/fiber'
+import { useTimeline, action, lookAt, spring, springPresets } from '@react-three/timeline'
+
+function Scene() {
+  const camera = useThree((s) => s.camera)
+  const red = useRef<Mesh>(null)
+  const blue = useRef<Mesh>(null)
+
+  useTimeline(async function* () {
+    while (true) {
+      yield* action({ update: lookAt(camera, red.current!, spring(springPresets.stiff)) })
+      yield* action({ update: lookAt(camera, blue.current!, spring(springPresets.stiff)) })
+    }
+  }, [])
+  // ...return meshes as above
+}
+```
+
+7) Mount the scene
+
+```tsx
+export default function App() {
+  return (
+    <Canvas>
+      <Scene />
+    </Canvas>
+  )
+}
+```

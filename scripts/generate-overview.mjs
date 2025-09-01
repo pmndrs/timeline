@@ -92,8 +92,8 @@ async function main() {
 
   const docParts = []
   docParts.push('---')
-  docParts.push('title: Overview over All Functions.')
-  docParts.push('description: Overview over all types of functions (action update, action until, action update ease)')
+  docParts.push('title: Overview of All Functions.')
+  docParts.push('description: Overview of function categories (action update, action until, action update ease)')
   docParts.push('nav: 3')
   docParts.push('---\n')
   const order = ['Action Update Ease', 'Action Update', 'Action Until', 'Structural', 'Misc']

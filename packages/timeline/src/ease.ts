@@ -42,7 +42,6 @@ export function velocity(velocity: number, maxAcceleration?: number): EaseFuncti
           .premultiply(current)
         quaternionToTangentSpace(prevOffsetQuaternion, velocityVector, clock.prevDelta)
         velocityVector.divideScalar(clock.prevDelta)
-        console.log('prev velocity', velocityVector.toArray())
       }
 
       if (velocityVector == null) {
@@ -136,19 +135,19 @@ export function time(duration: number): EaseFunction<unknown> {
 
 /**
  * action update ease function easing values according to spring physics
- * @param config allows to configure the physical properties of the spring (available presents are `springPresets.gente`, `springPresets.wobbly`, `springPresets.stiff`) - default is `springPresets.gente`
+ * @param config allows to configure the physical properties of the spring (available presets are `springPresets.gentle`, `springPresets.wobbly`, `springPresets.stiff`) - default is `springPresets.gentle`
  */
 export function spring(
   config: {
     mass: number
     stiffness: number
-    daming: number
+    damping: number
     maxVelocity?: number
   } = springPresets.gentle,
 ): EaseFunction<unknown> {
   const mass = Math.max(config.mass, 1e-9)
   const stiffness = config.stiffness
-  const damping = config.daming
+  const damping = config.damping
 
   let velocityVector: Vector3 | undefined
 
@@ -216,9 +215,9 @@ export function spring(
 }
 
 export const springPresets = {
-  gentle: { mass: 1, stiffness: 40, daming: 14 },
-  wobbly: { mass: 1, stiffness: 180, daming: 12 },
-  stiff: { mass: 1, stiffness: 300, daming: 20 },
+  gentle: { mass: 1, stiffness: 40, damping: 14 },
+  wobbly: { mass: 1, stiffness: 180, damping: 12 },
+  stiff: { mass: 1, stiffness: 300, damping: 20 },
 }
 
 const springAccelerationVector = new Vector3()

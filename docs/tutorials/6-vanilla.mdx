@@ -1,59 +1,266 @@
 ---
 title: Use pmndrs/timeline in vanilla three.js
-description: TBD
+description: Drive three.js scenes without React using @pmndrs/timeline.
 nav: 6
 ---
 
-pmndrs/timeline allows to use all the timeline features without react
+`@pmndrs/timeline` works in any three.js app — no React required. You create a timeline, start it, and call the returned update function each frame.
 
-### Differences to @react-three/uikit
+### Differences to React usage
 
-TODO: describe that the difference is that users have to manually call start and need to write the update function with the threejs animation loop
+- In React you use `useTimeline(...)` which ties into the render loop for you.
+- In vanilla you call `start(timeline)` and invoke the returned function every frame with `deltaSeconds` (the library internally clamps large deltas to ~1/30s for stability).
 
-## Building a user interface with `@pmndrs/timeline`
+## Build a scene with `@pmndrs/timeline`
+
+Below is a complete example using two spheres and a camera that alternates between them.
+
+<Sandpack
+  template="vanilla-ts"
+  customSetup={{
+    dependencies: {
+      'three': 'latest',
+      '@pmndrs/timeline': 'latest',
+      'postprocessing': 'latest'
+    },
+  }}
+  files={{
+    '/index.ts': `import { action, lookAt, spring, springPresets, start, timePassed } from '@pmndrs/timeline'
+import { EffectComposer, RenderPass, EffectPass, BloomEffect, VignetteEffect } from 'postprocessing'
+import { PerspectiveCamera, Scene, WebGLRenderer, Color, Mesh, MeshPhysicalMaterial, SphereGeometry, ACESFilmicToneMapping, AmbientLight, SRGBColorSpace, PMREMGenerator, HalfFloatType, MeshStandardMaterial } from 'three'
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
+import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js'
+
+const root = document.getElementById('root') as HTMLDivElement
+
+// renderer
+const renderer = new WebGLRenderer()
+renderer.outputColorSpace = SRGBColorSpace
+renderer.toneMapping = ACESFilmicToneMapping
+renderer.toneMappingExposure = 1
+root.appendChild(renderer.domElement)
+
+// scene & camera
+const scene = new Scene()
+scene.background = new Color(0x0a0a0a)
+const camera = new PerspectiveCamera(80, 1, 0.1, 100)
+camera.position.set(0, 0, 5)
+scene.add(camera)
+
+// postprocessing
+const composer = new EffectComposer(renderer, { frameBufferType: HalfFloatType })
+composer.addPass(new RenderPass(scene, camera))
+const bloom = new BloomEffect({ luminanceThreshold: 2, luminanceSmoothing: 0.9, height: 300 })
+const vignette = new VignetteEffect({ eskil: false, offset: 0.1, darkness: 1.1 })
+composer.addPass(new EffectPass(camera, bloom, vignette))
+
+// lights
+scene.add(new AmbientLight(0xffffff, 0.2))
+
+// geometry & meshes
+const sphere = new SphereGeometry(1, 32, 32)
+const redPill = new Mesh(sphere, new MeshPhysicalMaterial({ color: 'red', emissive: 'red', emissiveIntensity: 9 }))
+redPill.position.set(-2, -1, 0)
+redPill.scale.set(0.2, 0.2, 0.4)
+redPill.rotation.y = (-30 / 180) * Math.PI
+scene.add(redPill)
+
+const bluePill = new Mesh(sphere, new MeshPhysicalMaterial({ color: 'blue', emissive: 'blue', emissiveIntensity: 30 }))
+bluePill.position.set(2, -1, 0)
+bluePill.scale.set(0.2, 0.2, 0.4)
+bluePill.rotation.y = (20 / 180) * Math.PI
+scene.add(bluePill)
+
+// text
+const fontLoader = new FontLoader()
+const font = await fontLoader.loadAsync('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json')
+const textGeometry = new TextGeometry("Remember: all I'm offering is the truth. Nothing more.", { font, size: 0.3, depth: 0.02, curveSegments: 8 })
+const textMaterial = new MeshStandardMaterial({ color: 0xcccccc, toneMapped: false })
+const text = new Mesh(textGeometry, textMaterial)
+text.position.set(-4.5, 0.5, 0)
+scene.add(text)
+
+// environment
+const url = 'https://raw.githubusercontent.com/pmndrs/drei-assets/456060a26bbeb8fdf79326f224b6d99b8bcce736/hdri/studio_small_03_1k.hdr'
+const rgbe = new RGBELoader()
+const hdr = await rgbe.loadAsync(url)
+const pmrem = new PMREMGenerator(renderer)
+pmrem.compileEquirectangularShader()
+const env = pmrem.fromEquirectangular(hdr)
+scene.environment = env.texture
+scene.background = env.texture
+scene.backgroundRotation.y = (90 / 180) * Math.PI
+scene.backgroundBlurriness = 0.1
+scene.backgroundIntensity = 0.1
+hdr.dispose()
+pmrem.dispose()
+
+// timeline
+async function* mainTimeline() {
+  while (true) {
+    yield* action({ update: lookAt(camera, redPill, spring(springPresets.stiff)) })
+    yield* action({ until: timePassed(0.3, 'seconds') })
+    yield* action({ update: lookAt(camera, bluePill, spring(springPresets.stiff)) })
+    yield* action({ until: timePassed(0.3, 'seconds') })
+  }
+}
+const update = start(mainTimeline())
+
+// render loop
+let last = performance.now()
+function onFrame(now: number) {
+  const delta = now - last
+  last = now
+  update(undefined, delta)
+  composer.render(delta)
+  requestAnimationFrame(onFrame)
+}
+requestAnimationFrame(onFrame)
+
+// resize
+function onResize() {
+  const width = root.clientWidth
+  const height = root.clientHeight
+  camera.aspect = width / height
+  camera.updateProjectionMatrix()
+  renderer.setSize(width, height)
+  renderer.setPixelRatio(window.devicePixelRatio)
+  composer.setSize(width, height)
+}
+onResize()
+window.addEventListener('resize', onResize)
+`,
+    '/index.html': `<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vanilla timeline</title>
+  </head>
+  <body style="margin:0">
+    <div id="root" style="width:100vw;height:100vh"></div>
+    <script type="module" src="/index.ts"></script>
+  </body>
+</html>`
+  }}
+/>
 
 The first step is to install the dependencies.
 
-`npm i three @pmndrs/timeline`
+```bash
+pnpm add three @pmndrs/timeline
+```
 
-Next, we create the `index.js` file and import the necessary dependencies and setup a threejs scene.
+Next, we create the `index.ts` file and import the necessary dependencies and setup a three.js scene.
 
-```js
-import { PerspectiveCamera, Scene, WebGLRenderer } from 'three'
-import { start, action, lookAt } from '@pmndrs/timeline'
 
-const camera = new PerspectiveCamera(70, 1, 0.01, 100)
-camera.position.z = 10
+1) Create a renderer, scene, and camera
+
+```ts
+const root = document.getElementById('root') as HTMLDivElement
+const renderer = new WebGLRenderer()
+renderer.outputColorSpace = SRGBColorSpace
+renderer.toneMapping = ACESFilmicToneMapping
+renderer.toneMappingExposure = 1
+root.appendChild(renderer.domElement)
+
 const scene = new Scene()
-const canvas = document.getElementById('root') as HTMLCanvasElement
-const renderer = new WebGLRenderer({ antialias: true, canvas })
+const camera = new PerspectiveCamera(80, 1, 0.1, 100)
+camera.position.set(0, 0, 5)
+scene.add(camera)
 ```
 
-```js
-renderer.setAnimationLoop(animation)
-renderer.localClippingEnabled = true
-renderer.setTransparentSort(reversePainterSortStable)
+2) Optional: add postprocessing and lights
 
-function updateSize() {
-  renderer.setSize(window.innerWidth, window.innerHeight)
-  renderer.setPixelRatio(window.devicePixelRatio)
-  camera.aspect = window.innerWidth / window.innerHeight
+```ts
+const composer = new EffectComposer(renderer, { frameBufferType: HalfFloatType })
+composer.addPass(new RenderPass(scene, camera))
+const bloom = new BloomEffect({ luminanceThreshold: 2, luminanceSmoothing: 0.9, height: 300 })
+const vignette = new VignetteEffect({ eskil: false, offset: 0.1, darkness: 1.1 })
+composer.addPass(new EffectPass(camera, bloom, vignette))
+scene.add(new AmbientLight(0xffffff, 0.2))
+```
+
+3) Place meshes (targets for the camera)
+
+```ts
+const sphere = new SphereGeometry(1, 32, 32)
+const redPill = new Mesh(sphere, new MeshPhysicalMaterial({ color: 'red', emissive: 'red', emissiveIntensity: 9 }))
+redPill.position.set(-2, -1, 0)
+redPill.scale.set(0.2, 0.2, 0.4)
+redPill.rotation.y = (-30 / 180) * Math.PI
+scene.add(redPill)
+
+const bluePill = new Mesh(sphere, new MeshPhysicalMaterial({ color: 'blue', emissive: 'blue', emissiveIntensity: 30 }))
+bluePill.position.set(2, -1, 0)
+bluePill.scale.set(0.2, 0.2, 0.4)
+bluePill.rotation.y = (20 / 180) * Math.PI
+scene.add(bluePill)
+```
+
+4) Create and start the timeline
+
+```ts
+async function* mainTimeline() {
+  while (true) {
+    yield* action({ update: lookAt(camera, redPill, spring(springPresets.stiff)) })
+    yield* action({ until: timePassed(0.3, 'seconds') })
+    yield* action({ update: lookAt(camera, bluePill, spring(springPresets.stiff)) })
+    yield* action({ until: timePassed(0.3, 'seconds') })
+  }
+}
+const update = start(mainTimeline())
+```
+
+5) Drive frames and handle resize
+
+```ts
+let last = performance.now()
+function onFrame(now: number) {
+  const delta = Math.min(1/30, Math.max(0, (now - last) / 1000))
+  last = now
+  update(undefined, delta)
+  composer.render(delta)
+  requestAnimationFrame(onFrame)
+}
+requestAnimationFrame(onFrame)
+
+function onResize() {
+  const width = root.clientWidth
+  const height = root.clientHeight
+  camera.aspect = width / height
   camera.updateProjectionMatrix()
+  renderer.setSize(width, height)
+  renderer.setPixelRatio(window.devicePixelRatio)
+  composer.setSize(width, height)
 }
-
-updateSize()
-window.addEventListener('resize', updateSize)
-
-let prev: number | undefined
-function animation(time: number) {
-  const delta = prev == null ? 0 : time - prev
-  prev = time
-  update(delta)
-  renderer.render(scene, camera)
-}
+onResize()
+window.addEventListener('resize', onResize)
 ```
 
-If you use vite (`npm i vite`), you can create a `index.html` file, add the following content, and run `npx vite`.
+6) Optional: add text and an HDRI environment
+
+```ts
+const font = await new FontLoader().loadAsync('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json')
+const textGeometry = new TextGeometry("Remember: all I'm offering is the truth. Nothing more.", { font, size: 0.3, depth: 0.02, curveSegments: 8 })
+const text = new Mesh(textGeometry, new MeshStandardMaterial({ color: 0xcccccc, toneMapped: false }))
+text.position.set(-4.5, 0.5, 0)
+scene.add(text)
+
+const hdr = await new RGBELoader().loadAsync('https://raw.githubusercontent.com/pmndrs/drei-assets/456060a26bbeb8fdf79326f224b6d99b8bcce736/hdri/studio_small_03_1k.hdr')
+const pmrem = new PMREMGenerator(renderer)
+pmrem.compileEquirectangularShader()
+const env = pmrem.fromEquirectangular(hdr)
+scene.environment = env.texture
+scene.background = env.texture
+scene.backgroundRotation.y = (90 / 180) * Math.PI
+scene.backgroundBlurriness = 0.1
+scene.backgroundIntensity = 0.1
+hdr.dispose(); pmrem.dispose()
+```
+
+If you use vite (`pnpm add vite`), you can create a `index.html` file, add the following content, and run `pnpm vite`.
 
 ```html
 <!doctype html>
@@ -62,15 +269,11 @@ If you use vite (`npm i vite`), you can create a `index.html` file, add the foll
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
-    <script type="module" src="index.jsx"></script>
+    <script type="module" src="index.ts"></script>
   </head>
   <body style="margin: 0;">
     <div id="root" style="width: 100dvw; height: 100dvh;"></div>
   </body>
 </html>
 ```
-
-The result should look like this
-
-
 

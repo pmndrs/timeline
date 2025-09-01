@@ -12,6 +12,9 @@ export type TransitionTo = Vector3 | Quaternion | Euler | number | Array<number>
  * @example ```tsx
  * transition(property(camera, fov), 90, spring())
  * ```
+ *
+ * > [!NOTE]
+ * > When passing rotation as a number[3], Euler order used is YXZ. For numeric properties via `property(...)`, the x‑component is used.
  */
 export function transition<T>(
   from: TransitionFrom | ((newValue?: Vector3 | Quaternion) => TransitionFrom | number),

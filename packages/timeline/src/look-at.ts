@@ -10,6 +10,9 @@ const toHelper = new Vector3()
 /**
  * action update function for making a src object or quaternion look from its position towards the `toPosition`
  * @param ease allows to ease the rotation from the current state to the target position
+ *
+ * > [!NOTE]
+ * > World forward is −Z with up = `Object3D.DEFAULT_UP`. If source and target positions are identical.
  */
 export function lookAt<T>(
   from:

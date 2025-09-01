@@ -8,6 +8,9 @@ import type { EaseFunction } from './ease.js'
  * action update function for making a src object or position move away/towards the to position to be at the specified distance
  * combined with offsetRotation, this action update describes an exact target position in orbital coordinates
  * @param ease allows to ease the position from the current state to the position with the target distance
+ *
+ * > [!NOTE]
+ * > If `from` and `to` coincide (zero distance), direction is undefined; the action no‑ops and finishes.
  */
 export function offsetDistance<T>(
   from: Vector3 | ((newValue?: Vector3) => Vector3) | Object3D,
@@ -90,6 +93,9 @@ const YVEctor = new Vector3(0, 1, 0)
  * combined with offsetDistance, this action update describes an exact target position in orbital coordinates
  * @param ease allows to ease the position from the current state to the position with the target rotation offset
  * @param rotation the offset rotation in world space
+ *
+ * > [!NOTE]
+ * > Applies a world‑space rotation around `to` using a forward vector derived from the world up axis. Pair with `offsetDistance` to define orbital targets.
  */
 export function offsetRotation<T>(
   from: Vector3 | ((newValue?: Vector3) => Vector3) | Object3D,

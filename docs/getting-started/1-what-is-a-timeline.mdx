@@ -1,7 +1,149 @@
 ---
 title: What is a Timeline?
-description: TBD
+description: Learn the core concepts—actions, updates, until, orchestration, and parallelism.
 nav: 1
 ---
 
-explain the concepts of a timeline including actions containing update, until, timeline orchestration using await, parallel, sub timelines using function generators (explain from general concept to individual details - how long does a action run, ...)
+Timelines let you write 3D behaviors like a story using async generator functions. You yield actions, wait for conditions, and compose sequences, loops, and parallel flows in a readable way.
+
+At a high level, timelines are composed of actions and sub‑timelines. You chain them sequentially or run them in parallel to build rich behaviors.
+
+### Actions
+
+An action is a unit of work you `yield*` from a timeline. It can:
+- provide an `update(state, clock)` called every frame; return `false` to finish
+- provide an `until` promise to decide when it finishes
+- or both to run something every frame until another event happens
+
+Use an action when you want to perform work over time, wait for something to happen, or both.
+
+#### What does an action look like?
+
+```ts
+yield* action({
+  update: (state, clock) => {
+    // apply changes every frame
+    return false // finish immediately
+  },
+})
+```
+
+#### Waiting with `until`
+
+```ts
+yield* action({ until: timePassed(1, 'seconds') })
+```
+
+#### How long does an action run?
+
+An action runs until either:
+
+- its `update` returns `false`, or
+- its `until` promise resolves.
+
+If both are provided, the action keeps updating until the `until` resolves.
+
+#### The action clock
+
+The `clock` passed to `update(state, clock)` contains:
+
+- `delta`: seconds since last frame (internally clamped to ~1/30s)
+- `prevDelta`: previous `delta` or `undefined` on the first frame (used by `spring`/`velocity` to infer velocity)
+- `timelineTime`: total time since the timeline started
+- `actionTime`: time since the current action started (resets between actions)
+
+### Timelines
+
+A timeline is an async generator that yields actions (and can yield other timelines). You can loop, wait, and branch—writing behavior like a story.
+
+#### Reusable timelines
+
+A reusable timeline is a function that returns a timeline so it can be started many times.
+
+```ts
+async function* reusableFadeIn() {
+  yield* action({ until: timePassed(0.5, 'seconds') })
+}
+
+// later inside another timeline
+yield* reusableFadeIn()
+```
+
+### Running timelines
+
+- **React**: use `useTimeline(reusableTimeline, deps)`; it wires into `useFrame` and restarts on `deps` change.
+- **Vanilla**: use `start(reusableTimeline)` to get an update function you call each frame with `deltaSeconds`.
+
+```ts
+// React
+useTimeline(() => reusableFadeIn(), [someDep])
+
+// Vanilla
+const update = start(reusableFadeIn)
+// in your render loop
+update(state, deltaSeconds)
+```
+
+### Orchestration
+
+You can chain actions/timelines sequentially or run them concurrently.
+
+#### Sequential chaining
+
+- **Sequential**: `yield* action(A); yield* action(B);` runs A, then B.
+
+```ts
+// Sequential
+yield* action(A)
+yield* action(B)
+```
+
+#### Parallel composition
+
+- **All**: `yield* parallel('all', A, B)` continues when both finish
+- **Race**: `yield* parallel('race', A, B)` continues when the first finishes
+
+```ts
+yield* parallel('all', A, B)
+yield* parallel('race', A, B)
+```
+
+### Sub-timelines
+
+Timelines compose: you can `yield*` another reusable timeline anywhere. This keeps complex behaviors modular and readable.
+
+```ts
+// Reusable timeline
+async function* someReusableTimeline() {
+    yield* action({ until: timePassed(0.5, 'seconds') })
+}
+
+// Compose inside another timeline
+yield* someReusableTimeline()
+```
+
+### Graph timelines
+
+Model behaviors as named states and transitions. `graph(initial, stateMap)` drives the flow; `useTimelineGraph` is the React wrapper.
+
+```ts
+yield* graph('Idle', {
+  Idle: {
+    on: () => action({ until: timePassed(1, 'seconds') }),
+    to: 'Run',
+  },
+  Run: {/* ... */},
+})
+```
+
+### Built‑ins for motion
+
+- **Action updates**: `transition`, `lookAt`, `offsetDistance`, `offsetRotation`
+- **Eases**: `spring(preset|config)`, `time(durationSec)`, `velocity(speed, maxAccel?)`
+- **Helpers**: `worldSpace(type, object)`, `property(object, key)`, waits like `timePassed`, `mediaFinished`, `animationFinished`, plus `doUntil`/`doWhile`
+
+Explore full, runnable examples in the tutorials:
+- Building your First Timeline
+- Building Complex Timelines using Parallel
+- Building Graph Timelines
+- Use pmndrs/timeline in vanilla three.js
