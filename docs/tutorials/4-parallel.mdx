@@ -37,9 +37,9 @@ const cubeA = useRef<Mesh>(null)
 const cubeB = useRef<Mesh>(null)
 useTimeline(async function* () {
 while (true) {
-yield* parallel('all', moveTo(cubeA, new Vector3(-3.5, 0.5, 0)), moveTo(bluePill, new Vector3(1.5, -0.5, 0)))
+yield* parallel('all', moveTo(cubeA, new Vector3(-3.5, 0.5, 0)), moveTo(cubeB, new Vector3(1.5, -0.5, 0)))
 // Then nudge both back to origin, racing the first finisher
-yield\* parallel('all', moveTo(cubeB, new Vector3(0, 0, 0)), moveTo(bluePill, new Vector3(0, 0, 0)))
+yield\* parallel('all', moveTo(cubeA, new Vector3(0, 0, 0)), moveTo(cubeB, new Vector3(0, 0, 0)))
 }
 }, [])
 
