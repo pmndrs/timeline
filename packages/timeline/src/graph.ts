@@ -1,7 +1,12 @@
 import { action, forever, parallel, type ReusableTimeline, type ActionUpdate } from './index.js'
 
 export type StateTransition<T> = {
-  when: Promise<unknown> | ((...params: Parameters<ActionUpdate<T>>) => boolean)
+  /**
+   * @deprecated use `whenUpdate` instead
+   */
+  when?: (...params: Parameters<ActionUpdate<T>>) => boolean
+  whenPromise?: () => Promise<unknown>
+  whenUpdate?: (...params: Parameters<ActionUpdate<T>>) => boolean
 }
 
 export type StateTransitions<T, S extends string> = {
@@ -32,10 +37,15 @@ export async function* graph<T, S extends object>(initialStateName: keyof S, sta
             .map(
               ([transitionStateName, transitionCondition]) =>
                 async function* () {
-                  const when = transitionCondition.when
-                  yield* action(
-                    typeof when === 'function' ? { update: (state, clock) => !when(state, clock) } : { until: when },
-                  )
+                  const whenUpdate = transitionCondition.whenUpdate ?? transitionCondition.when
+                  const whenPromise = transitionCondition.whenPromise
+                  if (whenUpdate != null) {
+                    yield* action({ update: (state, clock) => !whenUpdate(state, clock) })
+                  } else if (whenPromise != null) {
+                    yield* action({ until: whenPromise() })
+                  } else {
+                    throw new Error(`transitions need either a whenPromise or whenUpdate condition`)
+                  }
                   stateName = transitionStateName
                 },
             )

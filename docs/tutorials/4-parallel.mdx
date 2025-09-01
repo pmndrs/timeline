@@ -28,35 +28,35 @@ import { Mesh, Vector3 } from 'three'
 import { useTimeline, action, parallel, transition, velocity } from '@react-three/timeline'
 
 async function* moveTo(ref: React.RefObject<Mesh>, to: Vector3) {
-  if (!ref.current) return
-  yield* action({ update: transition(ref.current.position, to, velocity(1, 5)) })
+if (!ref.current) return
+yield* action({ update: transition(ref.current.position, to, velocity(1, 5)) })
 }
 
 function Scene() {
-  const cubeA = useRef<Mesh>(null)
-  const cubeB = useRef<Mesh>(null)
-  useTimeline(async function* () {
-    while (true) {
-      yield* parallel('all', moveTo(cubeA, new Vector3(-3.5, 0.5, 0)), moveTo(bluePill, new Vector3(1.5, -0.5, 0)))
-      // Then nudge both back to origin, racing the first finisher
-      yield* parallel('all', moveTo(cubeB, new Vector3(0, 0, 0)), moveTo(bluePill, new Vector3(0, 0, 0)))
-    }
-  }, [])
+const cubeA = useRef<Mesh>(null)
+const cubeB = useRef<Mesh>(null)
+useTimeline(async function* () {
+while (true) {
+yield* parallel('all', moveTo(cubeA, new Vector3(-3.5, 0.5, 0)), moveTo(bluePill, new Vector3(1.5, -0.5, 0)))
+// Then nudge both back to origin, racing the first finisher
+yield\* parallel('all', moveTo(cubeB, new Vector3(0, 0, 0)), moveTo(bluePill, new Vector3(0, 0, 0)))
+}
+}, [])
 
-  return (
-    <>
-      <mesh ref={cubeA} position={[-2,0,0]}>
-        <boxGeometry />
-        <meshStandardMaterial color="hotpink" />
-      </mesh>
-      <mesh ref={cubeB} position={[2,0,0]}>
-        <boxGeometry />
-        <meshStandardMaterial color="orange" />
-      </mesh>
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[3,3,3]} intensity={1} />
-    </>
-  )
+return (
+<>
+<mesh ref={cubeA} position={[-2,0,0]}>
+<boxGeometry />
+<meshStandardMaterial color="hotpink" />
+</mesh>
+<mesh ref={cubeB} position={[2,0,0]}>
+<boxGeometry />
+<meshStandardMaterial color="orange" />
+</mesh>
+<ambientLight intensity={0.5} />
+<directionalLight position={[3,3,3]} intensity={1} />
+</>
+)
 }
 
 export default function App() {
@@ -82,7 +82,7 @@ createRoot(root).render(<App />)
 
 ### Build it in steps
 
-1) Define a reusable `moveTo` sub-timeline (what it is): a small timeline that transitions a mesh position to a target using `transition(..., spring())`.
+1. Define a reusable `moveTo` sub-timeline (what it is): a small timeline that transitions a mesh position to a target using `transition(..., spring())`.
 
 ```tsx
 export async function* moveTo(ref: React.RefObject<Mesh>, to: Vector3) {
@@ -91,7 +91,7 @@ export async function* moveTo(ref: React.RefObject<Mesh>, to: Vector3) {
 }
 ```
 
-2) Create a `Scene` with two cubes and lights
+2. Create a `Scene` with two cubes and lights
 
 ```tsx
 import { useRef } from 'react'
@@ -102,22 +102,22 @@ function Scene() {
   const cubeB = useRef<Mesh>(null)
   return (
     <>
-      <mesh ref={cubeA} position={[-2,0,0]}>
+      <mesh ref={cubeA} position={[-2, 0, 0]}>
         <boxGeometry />
         <meshStandardMaterial color="hotpink" />
       </mesh>
-      <mesh ref={cubeB} position={[2,0,0]}>
+      <mesh ref={cubeB} position={[2, 0, 0]}>
         <boxGeometry />
         <meshStandardMaterial color="orange" />
       </mesh>
       <ambientLight intensity={0.5} />
-      <directionalLight position={[3,3,3]} intensity={1} />
+      <directionalLight position={[3, 3, 3]} intensity={1} />
     </>
   )
 }
 ```
 
-3) Add the timeline using `parallel('all')` then `parallel('race')`
+3. Add the timeline using `parallel('all')` then `parallel('race')`
 
 ```tsx
 import { useTimeline, parallel } from '@react-three/timeline'
@@ -128,27 +128,24 @@ function Scene() {
   const cubeB = useRef<Mesh>(null)
   useTimeline(async function* () {
     while (true) {
-      yield* parallel('all', moveTo(redPill, new Vector3(-3.5, 0.5, 0)), moveTo(bluePill, new Vector3(1.5, -0.5, 0)))
-      // Then nudge both back to origin, racing the first finisher
-      yield* parallel('all', moveTo(redPill, new Vector3(0, 0, 0)), moveTo(bluePill, new Vector3(0, 0, 0)))
+      yield* parallel('all', moveTo(cubeA, new Vector3(-3.5, 0.5, 0)), moveTo(cubeB, new Vector3(1.5, -0.5, 0)))
+      yield* parallel('all', moveTo(cubeA, new Vector3(0, 0, 0)), moveTo(cubeB, new Vector3(0, 0, 0)))
     }
   }, [])
   // ...return cubes and lights from step 2
 }
 ```
 
-4) Mount the scene in a Canvas
+4. Mount the scene in a Canvas
 
 ```tsx
 import { Canvas } from '@react-three/fiber'
 
 export default function App() {
   return (
-    <Canvas style={{ position: "absolute", inset: "0", touchAction: "none" }}>
+    <Canvas style={{ position: 'absolute', inset: '0', touchAction: 'none' }}>
       <Scene />
     </Canvas>
   )
 }
 ```
-
- 

@@ -40,16 +40,20 @@ function Scene() {
   const red = useRef<Mesh>(null)
   const blue = useRef<Mesh>(null)
 
-  useTimelineGraph('red', {
-    red: {
-      timeline: () => action({ update: lookAt(camera, red.current!, spring()) }),
-      transitionTo: { blue: { when: mouseOnSide('right') } },
+  useTimelineGraph(
+    'red',
+    {
+      red: {
+        timeline: () => action({ update: lookAt(camera, redPill.current!, spring()) }),
+        transitionTo: { blue: { whenPromise: () => mouseOnSide('right') } },
+      },
+      blue: {
+        timeline: () => action({ update: lookAt(camera, bluePill.current!, spring()) }),
+        transitionTo: { red: { whenPromise: () => mouseOnSide('left') } },
+      },
     },
-    blue: {
-      timeline: () => action({ update: lookAt(camera, blue.current!, spring()) }),
-      transitionTo: { red: { when: mouseOnSide('left') } },
-    },
-  }, [camera])
+    [camera],
+  )
 
   return (
     <>

@@ -13,14 +13,16 @@ This walks you through building the intro example from scratch.
   customSetup={{
     dependencies: {
       'three': 'latest',
-      '@react-three/fiber': '9',
-      '@react-three/drei': '10',
-      '@react-three/timeline': 'latest'
+      '@react-three/fiber': '<9',
+      '@react-three/drei': '<10',
+      '@react-three/timeline': 'latest',
+      '@react-three/postprocessing': 'latest'
     },
   }}
   files={{
     '/App.tsx': `import { Canvas, useThree } from '@react-three/fiber'
-import { Text } from '@react-three/drei'
+import { Text, Environment } from '@react-three/drei'
+import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing'
 import { useRef } from 'react'
 import { Mesh } from 'three'
 import { useTimeline, action, lookAt, spring, springPresets } from '@react-three/timeline'
@@ -39,7 +41,7 @@ function Scene() {
 
   return (
     <>
-      <Text position-y={1} scale={0.3}>Your first timeline</Text>
+      <Text color="black" position-y={1} scale={0.3}>Your first timeline</Text>
       <mesh ref={red} position-x={-2} position-y={-1} rotation-y={(-30 / 180) * Math.PI} scale={[0.2, 0.2, 0.4]}>
         <sphereGeometry />
         <meshPhysicalMaterial emissive="red" emissiveIntensity={1.5} color="red" />
@@ -55,6 +57,17 @@ function Scene() {
 export default function App() {
   return (
     <Canvas style={{ position: "absolute", inset: "0", touchAction: "none" }}>
+      <EffectComposer>
+        <Bloom luminanceThreshold={0} luminanceSmoothing={0.9} height={300} />
+        <Vignette eskil={false} offset={0.1} darkness={1.1} />
+      </EffectComposer>
+      <Environment
+        backgroundIntensity={0.1}
+        backgroundRotation={[0, (90 / 180) * Math.PI, 0]}
+        preset="studio"
+        background
+        blur={0.1}
+      />
       <Scene />
     </Canvas>
   )
@@ -107,7 +120,7 @@ function Scene() {
   const blue = useRef<Mesh>(null)
   return (
     <>
-      <Text position-y={1} scale={0.3}>Your first timeline</Text>
+      <Text color="black" position-y={1} scale={0.3}>Your first timeline</Text>
       <mesh ref={red} position-x={-2} position-y={-1} rotation-y={(-30/180)*Math.PI} scale={[0.2,0.2,0.4]}>
         <sphereGeometry />
         <meshPhysicalMaterial emissive="red" emissiveIntensity={1.5} color="red" />
