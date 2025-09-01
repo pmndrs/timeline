@@ -13,8 +13,8 @@ This walks you through building the intro example from scratch.
   customSetup={{
     dependencies: {
       'three': 'latest',
-      '@react-three/fiber': '<9',
-      '@react-three/drei': '<10',
+      '@react-three/fiber': '9',
+      '@react-three/drei': '10',
       '@react-three/timeline': 'latest'
     },
   }}
@@ -54,7 +54,7 @@ function Scene() {
 
 export default function App() {
   return (
-    <Canvas>
+    <Canvas style={{ position: "absolute", inset: "0", touchAction: "none" }}>
       <Scene />
     </Canvas>
   )
@@ -80,11 +80,7 @@ pnpm add three @react-three/fiber @react-three/drei @react-three/timeline
 
 Create `App.tsx` and render a scene with two meshes.
 
-3) Add the behavior
-
-We use `useTimeline` to run a generator every frame. Inside it, the `while (true)` loop keeps the sequence going, and each `yield* action({ update: lookAt(...) })` eases the camera toward a target; once the ease completes, the next action starts.
-
-4) The scene shell
+3) The scene shell
 
 ```tsx
 // App.tsx
@@ -92,14 +88,14 @@ import { Canvas } from '@react-three/fiber'
 
 export default function App() {
   return (
-    <Canvas>
+    <Canvas style={{ position: "absolute", inset: "0", touchAction: "none" }}>
       {/* Add <Scene /> in the next step */}
     </Canvas>
   )
 }
 ```
 
-5) Add meshes and references
+4) Add meshes and references
 
 ```tsx
 import { useRef } from 'react'
@@ -125,7 +121,10 @@ function Scene() {
 }
 ```
 
-6) Add the timeline
+5) Add the timeline
+
+
+We use `useTimeline` to run a `while (true)` loop, which keeps the sequence going, and each `yield* action({ update: lookAt(...) })` eases the camera toward a target using a spring; once the ease completes, the next action starts.
 
 ```tsx
 import { useThree } from '@react-three/fiber'
@@ -151,7 +150,7 @@ function Scene() {
 ```tsx
 export default function App() {
   return (
-    <Canvas>
+    <Canvas style={{ position: "absolute", inset: "0", touchAction: "none" }}>
       <Scene />
     </Canvas>
   )

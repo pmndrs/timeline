@@ -18,44 +18,38 @@ Graph timelines let you model states and transitions. We'll switch between two s
   }}
   files={{
     '/App.tsx': `import { Canvas, useThree } from '@react-three/fiber'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRef } from 'react'
 import { Mesh } from 'three'
-import { useTimelineGraph, action, lookAt, spring, graph, type StateMap } from '@react-three/timeline'
+import { useTimelineGraph, action, lookAt, spring } from '@react-three/timeline'
 
-type States = { red: undefined; blue: undefined }
-
-function useMouseX() {
-  const [x, setX] = useState(0)
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => setX(e.clientX / window.innerWidth)
+function mouseOnSide(side: 'left' | 'right'): Promise<void> {
+  return new Promise((resolve) => {
+    function onMove(e: MouseEvent) {
+      const onRight = e.clientX / window.innerWidth > 0.5
+      if ((side === 'right' && onRight) || (side === 'left' && !onRight)) {
+        window.removeEventListener('mousemove', onMove)
+        resolve()
+      }
+    }
     window.addEventListener('mousemove', onMove)
-    return () => window.removeEventListener('mousemove', onMove)
-  }, [])
-  return x
+  })
 }
 
 function Scene() {
   const camera = useThree((s) => s.camera)
   const red = useRef<Mesh>(null)
   const blue = useRef<Mesh>(null)
-  const mouseX = useMouseX()
 
-  const states = useMemo<StateMap<any, States>>(() => ({
+  useTimelineGraph('red', {
     red: {
       timeline: () => action({ update: lookAt(camera, red.current!, spring()) }),
-      transitionTo: {
-        blue: { when: () => mouseX > 0.5 },
-      },
+      transitionTo: { blue: { when: mouseOnSide('right') } },
     },
     blue: {
       timeline: () => action({ update: lookAt(camera, blue.current!, spring()) }),
-      transitionTo: {
-        red: { when: () => mouseX <= 0.5 },
-      },
+      transitionTo: { red: { when: mouseOnSide('left') } },
     },
-  }), [camera, mouseX])
-
-  useTimelineGraph('red', states, [mouseX])
+  }, [camera])
 
   return (
     <>
@@ -75,7 +69,7 @@ function Scene() {
 
 export default function App() {
   return (
-    <Canvas>
+    <Canvas style={{ position: "absolute", inset: "0", touchAction: "none" }}>
       <Scene />
     </Canvas>
   )

@@ -6,7 +6,10 @@ nav: 4
 
 Use `parallel('all' | 'race', ...)` to orchestrate concurrent behaviors. In this example we move two cubes simultaneously and continue only when both finishes.
 
-Note: you can pass conditionally included timelines by using booleans; falsey entries are ignored. On `'race'`, non‑winning timelines are canceled and their cleanups run.
+> [!NOTE]
+> you can pass conditionally included timelines by using booleans; falsey entries are ignored. On `'race'`, non‑winning timelines are canceled and their cleanups run.
+
+The following demo shows how the left cube constantly moves since it has to cover a larger distance while the right cube waits for the cube since both move at the same speed while the right cube has a shorter distance to travel.
 
 <Sandpack
   template="react-ts"
@@ -22,27 +25,22 @@ Note: you can pass conditionally included timelines by using booleans; falsey en
     '/App.tsx': `import { Canvas, useThree } from '@react-three/fiber'
 import { useRef } from 'react'
 import { Mesh, Vector3 } from 'three'
-import { useTimeline, action, parallel, transition, spring } from '@react-three/timeline'
+import { useTimeline, action, parallel, transition, velocity } from '@react-three/timeline'
 
 async function* moveTo(ref: React.RefObject<Mesh>, to: Vector3) {
   if (!ref.current) return
-  yield* action({ update: transition(ref.current.position, to, spring()) })
+  yield* action({ update: transition(ref.current.position, to, velocity(1, 5)) })
 }
 
 function Scene() {
   const cubeA = useRef<Mesh>(null)
   const cubeB = useRef<Mesh>(null)
   useTimeline(async function* () {
-    // Run both moves concurrently and wait for both to finish
-    yield* parallel('all',
-      moveTo(cubeA, new Vector3(-1.5, 0.5, 0)),
-      moveTo(cubeB, new Vector3(1.5, -0.5, 0))
-    )
-    // Then nudge both back to origin, racing the first finisher
-    yield* parallel('race',
-      moveTo(cubeA, new Vector3(0, 0, 0)),
-      moveTo(cubeB, new Vector3(0, 0, 0))
-    )
+    while (true) {
+      yield* parallel('all', moveTo(cubeA, new Vector3(-3.5, 0.5, 0)), moveTo(bluePill, new Vector3(1.5, -0.5, 0)))
+      // Then nudge both back to origin, racing the first finisher
+      yield* parallel('all', moveTo(cubeB, new Vector3(0, 0, 0)), moveTo(bluePill, new Vector3(0, 0, 0)))
+    }
   }, [])
 
   return (
@@ -63,7 +61,7 @@ function Scene() {
 
 export default function App() {
   return (
-    <Canvas>
+    <Canvas style={{ position: "absolute", inset: "0", touchAction: "none" }}>
       <Scene />
     </Canvas>
   )
@@ -89,7 +87,7 @@ createRoot(root).render(<App />)
 ```tsx
 export async function* moveTo(ref: React.RefObject<Mesh>, to: Vector3) {
   if (!ref.current) return
-  yield* action({ update: transition(ref.current.position, to, spring()) })
+  yield* action({ update: transition(ref.current.position, to, velocity(1, 5)) })
 }
 ```
 
@@ -129,16 +127,11 @@ function Scene() {
   const cubeA = useRef<Mesh>(null)
   const cubeB = useRef<Mesh>(null)
   useTimeline(async function* () {
-    // move both, wait for both
-    yield* parallel('all',
-      moveTo(cubeA, new Vector3(-1.5, 0.5, 0)),
-      moveTo(cubeB, new Vector3(1.5, -0.5, 0))
-    )
-    // race back to origin
-    yield* parallel('race',
-      moveTo(cubeA, new Vector3(0, 0, 0)),
-      moveTo(cubeB, new Vector3(0, 0, 0))
-    )
+    while (true) {
+      yield* parallel('all', moveTo(redPill, new Vector3(-3.5, 0.5, 0)), moveTo(bluePill, new Vector3(1.5, -0.5, 0)))
+      // Then nudge both back to origin, racing the first finisher
+      yield* parallel('all', moveTo(redPill, new Vector3(0, 0, 0)), moveTo(bluePill, new Vector3(0, 0, 0)))
+    }
   }, [])
   // ...return cubes and lights from step 2
 }
@@ -151,7 +144,7 @@ import { Canvas } from '@react-three/fiber'
 
 export default function App() {
   return (
-    <Canvas>
+    <Canvas style={{ position: "absolute", inset: "0", touchAction: "none" }}>
       <Scene />
     </Canvas>
   )
