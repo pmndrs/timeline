@@ -86,7 +86,7 @@ export function start<T>(timeline: Timeline<T>, abortSignal?: AbortSignal, onErr
     clock.actionTime += delta
     clock.timelineTime += delta
     clock.prevDelta = clock.delta
-    clock.delta = Math.min(delta, 1 / 30)
+    clock.delta = Math.max(1e-6, Math.min(delta, 1 / 30))
     ref.current?.(state, clock)
   }
 }

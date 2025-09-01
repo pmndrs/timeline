@@ -56,20 +56,20 @@ transitionTo: { red: { whenPromise: () => mouseOnSide('left') } },
 )
 
 return (
+
 <>
-<mesh ref={red} position-x={-2} position-y={-1} rotation-y={(-30 / 180) _ Math.PI} scale={[0.2, 0.2, 0.4]}>
-<sphereGeometry />
-<meshPhysicalMaterial emissive="red" emissiveIntensity={1.5} color="red" />
-</mesh>
-<mesh ref={blue} position-x={2} position-y={-1} rotation-y={(20 / 180) _ Math.PI} scale={[0.2, 0.2, 0.4]}>
-<sphereGeometry />
-<meshPhysicalMaterial emissive="blue" emissiveIntensity={5} color="blue" />
-</mesh>
-<ambientLight intensity={0.5} />
-<directionalLight position={[3,3,3]} intensity={1} />
+  <mesh ref={red} position-x={-2} position-y={-1} rotation-y={(-30 / 180) * Math.PI} scale={[0.2, 0.2, 0.4]}>
+    <sphereGeometry />
+    <meshPhysicalMaterial emissive="red" emissiveIntensity={1.5} color="red" />
+  </mesh>
+  <mesh ref={blue} position-x={2} position-y={-1} rotation-y={(20 / 180) * Math.PI} scale={[0.2, 0.2, 0.4]}>
+    <sphereGeometry />
+    <meshPhysicalMaterial emissive="blue" emissiveIntensity={5} color="blue" />
+  </mesh>
+  <ambientLight intensity={0.5} />
+  <directionalLight position={[3, 3, 3]} intensity={1} />
 </>
-)
-}
+) }
 
 export default function App() {
   return (

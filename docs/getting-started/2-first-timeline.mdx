@@ -16,13 +16,11 @@ This walks you through building the intro example from scratch.
       '@react-three/fiber': '<9',
       '@react-three/drei': '<10',
       '@react-three/timeline': 'latest',
-      '@react-three/postprocessing': 'latest'
     },
   }}
   files={{
     '/App.tsx': `import { Canvas, useThree } from '@react-three/fiber'
 import { Text, Environment } from '@react-three/drei'
-import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing'
 import { useRef } from 'react'
 import { Mesh } from 'three'
 import { useTimeline, action, lookAt, spring, springPresets } from '@react-three/timeline'
@@ -57,10 +55,6 @@ function Scene() {
 export default function App() {
   return (
     <Canvas style={{ position: "absolute", inset: "0", touchAction: "none" }}>
-      <EffectComposer>
-        <Bloom luminanceThreshold={0} luminanceSmoothing={0.9} height={300} />
-        <Vignette eskil={false} offset={0.1} darkness={1.1} />
-      </EffectComposer>
       <Environment
         backgroundIntensity={0.1}
         backgroundRotation={[0, (90 / 180) * Math.PI, 0]}
