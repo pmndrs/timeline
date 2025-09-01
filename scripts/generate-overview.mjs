@@ -77,7 +77,10 @@ async function main() {
     if (params.length) {
       parts.push('#### Parameters')
       for (const p of params) {
-        const pType = p.type?.toString?.() || p.type?.name || ''
+        const rawType = p.type?.toString?.() || p.type?.name || ''
+        // Wrap types that include angle brackets or other characters that MDX/JSX may parse incorrectly
+        const needsWrap = /[<>]|\(|\)|\{|\}|\||\[|\]|,/.test(rawType)
+        const pType = needsWrap ? '`' + rawType + '`' : rawType
         const pText = p.comment?.summary?.map((x) => x.text).join('').trim() || ''
         const line = '- \\\`' + p.name + '\\\` (' + pType + ')' + (pText ? ': ' + pText : '')
         parts.push(line)
@@ -85,6 +88,7 @@ async function main() {
     }
     if (returns) {
       parts.push('#### Returns')
+      // Always wrap returns in backticks to avoid MDX interpreting generics as JSX
       parts.push('`' + returns + '`')
     }
     categories[category].push({ name, body: parts.join('\n') })
