@@ -135,7 +135,6 @@ export function Lamborghini(props: any) {
           frontWheels.forEach((wheel) => (wheel!.rotation.y = Math.random() - 0.5))
           yield* action({
             update: [
-              //offsetDistance(ref1.current!, point, 0),
               offsetDistance(camera, point, 50 + distance * 500),
               offsetRotation(
                 camera,
@@ -196,14 +195,6 @@ export function Lamborghini(props: any) {
   return (
     <>
       <primitive object={scene} {...props} />
-      {/*<mesh ref={ref1} scale={1}>
-        <sphereGeometry />
-        <meshBasicMaterial color="red" />
-      </mesh>
-      <mesh ref={ref2} scale={1}>
-        <sphereGeometry />
-        <meshBasicMaterial color="blue" />
-      </mesh>*/}
     </>
   )
 }
