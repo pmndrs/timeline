@@ -54,7 +54,7 @@ export async function promiseConcat(promises: Array<Promise<unknown>>): Promise<
  * function for generating a timeline that executes the inner timelines until a promise is met
  */
 export async function* doUntil<T>(promise: Promise<unknown>, timeline: ReusableTimeline<T>) {
-  return parallel('race', action({ until: promise }), async function* () {
+  yield* parallel('race', action({ until: promise }), async function* () {
     while (true) {
       yield* timeline()
     }
@@ -68,7 +68,7 @@ export async function* doWhile<T>(
   update: (...params: Parameters<ActionUpdate<T>>) => boolean,
   timeline: ReusableTimeline<T>,
 ) {
-  return parallel('race', action({ update }), async function* () {
+  yield* parallel('race', action({ update }), async function* () {
     while (true) {
       yield* timeline()
     }

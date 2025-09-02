@@ -52,7 +52,7 @@ export function velocity(velocity: number, maxAcceleration?: number): EaseFuncti
       deltaTangent.copy(velocityVector).multiplyScalar(clock.delta)
 
       tangentSpaceToQuaternion(deltaTangent, deltaQuaternion)
-      ;(target as Quaternion).multiplyQuaternions(current, deltaQuaternion)
+      ;(target as Quaternion).multiplyQuaternions(deltaQuaternion, current)
       return shouldContinue
     }
 
@@ -102,7 +102,7 @@ function velocityEaseComputeVelocity(
     accelerationVector.divideScalar(accelerationLength).multiplyScalar(Math.min(maxAcceleration, accelerationLength))
   }
   target.addScaledVector(accelerationVector, clock.delta)
-  if (target.length() * clock.delta >= currentGoalOffsetLength) {
+  if (currentGoalOffsetLength <= velocity * clock.delta) {
     return false
   }
   return true
@@ -186,7 +186,7 @@ export function spring(
       deltaTangent.copy(velocityVector).multiplyScalar(clock.delta)
 
       tangentSpaceToQuaternion(deltaTangent, deltaQuaternion)
-      ;(target as Quaternion).multiplyQuaternions(current, deltaQuaternion)
+      ;(target as Quaternion).multiplyQuaternions(deltaQuaternion, current)
       return shouldContinue
     }
 
@@ -277,15 +277,6 @@ function quaternionToTangentSpace(quaternion: Quaternion, target: Vector3, delta
   //nromalize target and multiply by theta (direction = axis, length = angle)
   target.multiplyScalar(theta / s)
   //cut off very small values to prevent numerical drift when converting quaternions from and to tangent space
-  if (Math.abs(target.x) < delta * 0.1) {
-    target.x = 0
-  }
-  if (Math.abs(target.y) < delta * 0.1) {
-    target.y = 0
-  }
-  if (Math.abs(target.z) < delta * 0.1) {
-    target.z = 0
-  }
 }
 
 function tangentSpaceToQuaternion(tangent: Vector3, target: Quaternion): void {
