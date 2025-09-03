@@ -22,6 +22,7 @@
     "vite": "^7.0.3"
   },
   "scripts": {
-    "dev": "vite"
+    "dev": "vite",
+    "build": "vite build"
   }
 }

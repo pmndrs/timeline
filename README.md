@@ -63,9 +63,9 @@ return (
 - [What is a timeline?](https://pmndrs.github.io/timeline/getting-started/1-what-is-a-timeline)
 - [Building your First Timeline](https://pmndrs.github.io/timeline/getting-started/2-first-timeline)
 - [Overview over All Functions](https://pmndrs.github.io/timeline/getting-started/3-overview)
-- [Tutorial: Building Complex Timelines using Parallel](https://pmndrs.github.io/timeline/tutorials/4-parallel)
-- [Tutorial: Building Graph Timelines](https://pmndrs.github.io/timeline/tutorials/5-graph)
-- [Tutorial: Use pmndrs/timeline in vanilla three.js](https://pmndrs.github.io/timeline/tutorials/6-vanilla)
+- [Tutorial: Building Complex Timelines using Parallel](https://pmndrs.github.io/timeline/tutorials/5-parallel)
+- [Tutorial: Building Graph Timelines](https://pmndrs.github.io/timeline/tutorials/6-graph)
+- [Tutorial: Use pmndrs/timeline in vanilla three.js](https://pmndrs.github.io/timeline/tutorials/7-vanilla)
 
 ## Sponsors
 
