@@ -1,5 +1,5 @@
 <h1 align="center">@react-three/timeline</h1>
-<h3 align="center">Write composable declarative <br/> 3D behaviors like a story.</h3>
+<h3 align="center">Write composable <br/> 3D behaviors like a story.</h3>
 <br/>
 
 <p align="center">
