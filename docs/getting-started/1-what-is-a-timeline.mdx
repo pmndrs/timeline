@@ -129,8 +129,8 @@ Model behaviors as named states and transitions. `graph(initial, stateMap)` driv
 ```ts
 yield* graph('Idle', {
   Idle: {
-    on: () => action({ until: timePassed(1, 'seconds') }),
-    to: 'Run',
+    timeline: () => action({ update: ... }),
+    transitionTo: { Run: { whenPromise: () => timePassed(1, "seconds") } }
   },
   Run: {/* ... */},
 })
