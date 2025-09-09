@@ -5,10 +5,16 @@ const content = 'Introducing              @react-three/timeline'
 
 export const TextOpacities = content.split('').map(() => signal(0))
 export const TextYOffset = content.split('').map(() => signal(0))
+export const PressStartVisible = signal<'visible' | 'hidden'>('visible')
 
 export function RenderText() {
   return (
     <group position={[0, -75, 400]} rotation-x={-Math.PI / 2}>
+      <Root>
+        <Text visibility={PressStartVisible} color="white" fontSize={1000}>
+          Press to start.
+        </Text>
+      </Root>
       <Root flexDirection="row">
         {content.split('').map((char, i) =>
           char === ' ' ? (

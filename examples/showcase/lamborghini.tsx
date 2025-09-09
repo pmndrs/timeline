@@ -16,11 +16,11 @@ import {
   useTimeline,
   velocity,
 } from '@react-three/timeline'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 import { MeshBVH, StaticGeometryGenerator } from 'three-mesh-bvh'
 import { useDepthOfFieldStore } from './effect.js'
-import { TextOpacities, TextYOffset } from './text.js'
+import { PressStartVisible, TextOpacities, TextYOffset } from './text.js'
 
 const NegZ = new THREE.Vector3(0, 0, -1)
 const directionHelper = new THREE.Vector3()
@@ -41,8 +41,6 @@ export function Lamborghini(props: any) {
   }, [scene])
   useEffect(() => scene.traverse((object) => (object.castShadow = true)), [scene])
   const camera = useThree((s) => s.camera)
-  const ref1 = useRef(null)
-  const ref2 = useRef(null)
   useTimeline(
     async function* () {
       const wheels = ['RR', 'RL', 'FR', 'FL'].map((name) => scene.getObjectByName(name))
@@ -56,8 +54,10 @@ export function Lamborghini(props: any) {
         ;(camera as THREE.PerspectiveCamera).updateProjectionMatrix()
         TextOpacities.forEach((opacity) => (opacity.value = 0))
         TextYOffset.forEach((offset) => (offset.value = 500))
+        PressStartVisible.value = 'visible'
 
         await new Promise((resolve) => window.addEventListener('click', resolve))
+        PressStartVisible.value = 'hidden'
         const audio = document.createElement('audio')
         audio.src = './background.mp3'
         document.body.appendChild(audio)
