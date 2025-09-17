@@ -40,15 +40,15 @@ export function read(
     into ??= new Vector3()
     return into.set(value, 0, 0, 0)
   }
-  if (value instanceof Vector3) {
+  if (value.isVector3) {
     into ??= new Vector3()
     return (into as Vector3).copy(value)
   }
-  if (value instanceof Quaternion) {
+  if (value.isQuaternion) {
     into ??= new Quaternion()
     return into.copy(value)
   }
-  if (value instanceof Euler) {
+  if (value.isEuler) {
     into ??= new Quaternion()
     return (into as Quaternion).setFromEuler(value)
   }
