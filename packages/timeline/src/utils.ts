@@ -8,11 +8,11 @@ export function write<T>(
     into(value as T)
     return
   }
-  if (into instanceof Vector3) {
+  if (into.isVector3) {
     into.copy(value)
     return
   }
-  if (into instanceof Euler) {
+  if (into.isEuler) {
     into.setFromQuaternion(value as any)
     return
   }

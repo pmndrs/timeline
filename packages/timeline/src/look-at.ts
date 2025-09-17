@@ -24,13 +24,13 @@ export function lookAt<T>(
   toPosition: Vector3 | Array<number> | (() => Vector3 | Array<number>) | Object3D,
   ease?: EaseFunction<T>,
 ): ActionUpdate<T> {
-  if (from instanceof Object3D) {
+  if (from.isObject3D) {
     from = {
       position: worldSpace('position', from),
       rotation: worldSpace('quaternion', from),
     }
   }
-  if (toPosition instanceof Object3D) {
+  if (toPosition.isObject3D) {
     toPosition = worldSpace('position', toPosition)
   }
   const goal = new Quaternion()

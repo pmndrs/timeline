@@ -27,7 +27,7 @@ export function velocity(velocity: number, maxAcceleration?: number): EaseFuncti
   let velocityVector: Vector3 | undefined
 
   return (_state, clock, prev, current, goal, target) => {
-    if (current instanceof Quaternion) {
+    if (current.isQuaternion) {
       offsetQuaternion
         .copy(current)
         .invert()
@@ -115,7 +115,7 @@ export function time(duration: number): EaseFunction<unknown> {
   return (_state, clock, _prev, current, goal, target) => {
     //0 means only current and 1 means only goal
     const slerpValue = Math.min(1, clock.delta / duration)
-    if (target instanceof Vector3) {
+    if (target.isVector3) {
       target
         .set(0, 0, 0)
         .addScaledVector(current as Vector3, 1 - slerpValue)
@@ -152,7 +152,7 @@ export function spring(
   let velocityVector: Vector3 | undefined
 
   return (_state, clock, prev, current, goal, target) => {
-    if (current instanceof Quaternion) {
+    if (current.isQuaternion) {
       offsetQuaternion
         .copy(current)
         .invert()

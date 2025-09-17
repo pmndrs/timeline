@@ -18,10 +18,10 @@ export function offsetDistance<T>(
   distance: number,
   ease?: EaseFunction<T>,
 ): ActionUpdate<T> {
-  if (from instanceof Object3D) {
+  if (from.isObject3D) {
     from = worldSpace('position', from)
   }
-  if (to instanceof Object3D) {
+  if (to.isObject3D) {
     to = worldSpace('position', to)
   }
   const goal = new Vector3(distance, 0, 0)
@@ -103,10 +103,10 @@ export function offsetRotation<T>(
   rotation: Euler | Quaternion | Array<number> | (() => Euler | Quaternion | Array<number>),
   ease?: EaseFunction<T>,
 ): ActionUpdate<T> {
-  if (from instanceof Object3D) {
+  if (from.isObject3D) {
     from = worldSpace('position', from)
   }
-  if (to instanceof Object3D) {
+  if (to.isObject3D) {
     to = worldSpace('position', to)
   }
   const goal = new Quaternion()
