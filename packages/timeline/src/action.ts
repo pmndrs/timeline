@@ -66,5 +66,6 @@ export async function* action<T>(action: Action<T>): NonReuseableTimeline<T> {
   yield timelineYield
   if (!internalAbortController.signal.aborted) {
     internalAbortController.abort()
+    cleanup?.()
   }
 }
