@@ -1,5 +1,5 @@
-import { action } from './action.js'
-import { abortSignalToPromise, forever, type ReusableTimeline, type TimelineYieldActionUpdate } from './index.js'
+import { action, ActionUpdate } from './action.js'
+import { abortSignalToPromise, forever, type ReusableTimeline } from './index.js'
 import { parallel } from './parallel.js'
 import { scope } from './scope.js'
 
@@ -11,9 +11,9 @@ export type GraphStateTransition<T> = {
   /**
    * @deprecated use `whenUpdate` instead
    */
-  when?: (...params: Parameters<TimelineYieldActionUpdate<T>>) => boolean
+  when?: (...params: Parameters<ActionUpdate<T>>) => boolean
   whenPromise?: () => Promise<unknown>
-  whenUpdate?: (...params: Parameters<TimelineYieldActionUpdate<T>>) => boolean
+  whenUpdate?: (...params: Parameters<ActionUpdate<T>>) => boolean
 }
 
 export type GraphStateTransitions<T, S extends string = string> = {
@@ -91,7 +91,7 @@ export class TimelineGraph<T> {
               const whenUpdate = transitionCondition.whenUpdate ?? transitionCondition.when
               const whenPromise = transitionCondition.whenPromise
               if (whenUpdate != null) {
-                yield* action({ update: (state, clock) => !whenUpdate(state, clock) })
+                yield* action({ update: (state, clock, actionTime) => !whenUpdate(state, clock, actionTime) })
               } else if (whenPromise != null) {
                 yield* action({ until: whenPromise() })
               } else {
