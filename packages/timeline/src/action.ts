@@ -25,17 +25,28 @@ export async function* action<T>(action: Action<T>): NonReuseableTimeline<T> {
       callback: (s) => s.addEventListener('abort', cleanup, { once: true, signal: internalAbortController.signal }),
     }
   }
+  if (action.until != null) {
+    action.until.then(() => internalAbortController.abort()).catch(console.error)
+  }
   const timelineYield: TimelineYieldAction<T> = { type: 'action', abortSignal: internalAbortController.signal }
   if (action.update != null && Array.isArray(action.update)) {
     const updates = action.update
     let actionTime = 0
     timelineYield.update = (state, clock) => {
       actionTime += clock.delta
+      let shouldContinue: boolean | undefined
       for (let i = 0; i < updates.length; i++) {
-        if (updates[i](state, clock, actionTime) === false) {
-          internalAbortController.abort()
-          return
+        const currentShouldContinue = updates[i](state, clock, actionTime)
+        if (currentShouldContinue == null) {
+          continue
         }
+        if (shouldContinue == null || shouldContinue == null) {
+          shouldContinue = currentShouldContinue
+        }
+      }
+      shouldContinue ??= true
+      if (!shouldContinue) {
+        internalAbortController.abort()
       }
     }
   }

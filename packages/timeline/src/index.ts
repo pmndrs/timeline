@@ -35,7 +35,7 @@ export function start<T>(timeline: Timeline<T>, abortSignal?: AbortSignal, onErr
   startAsync(timeline, ref, abortSignal).catch(onError)
   const clock: TimelineClock = { delta: 0, prevDelta: 0 }
   return (state, delta) => {
-    clock.delta += delta
+    clock.delta = delta
     ref.current?.(state, clock)
     clock.prevDelta = delta
   }

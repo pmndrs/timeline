@@ -1,5 +1,5 @@
 import { Matrix4, Object3D, Quaternion, Vector3 } from 'three'
-import { worldSpace, type TimelineYieldActionUpdate, type EaseFunction } from './index.js'
+import { worldSpace, type ActionUpdate, type EaseFunction } from './index.js'
 import { getPrevious, setPrevious } from './previous.js'
 import { read, write } from './utils.js'
 
@@ -23,7 +23,7 @@ export function lookAt<T>(
     | Object3D,
   toPosition: Vector3 | Array<number> | (() => Vector3 | Array<number>) | Object3D,
   ease?: EaseFunction<T>,
-): TimelineYieldActionUpdate<T> {
+): ActionUpdate<T> {
   if (from instanceof Object3D) {
     from = {
       position: worldSpace('position', from),
