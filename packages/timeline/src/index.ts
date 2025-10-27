@@ -48,13 +48,16 @@ export async function startAsync<T>(
 ) {
   timeline = typeof timeline === 'function' ? timeline() : timeline
   const abortPromise = abortSignalToPromise(abortSignal)
+  const internalAbortController = new AbortController()
+  //combination of inner and outer abort signal
+  const globalAbortSignal = AbortSignal.any([internalAbortController.signal, abortSignal])
 
   for await (const timelineYield of timeline) {
     if (abortSignal.aborted) {
       return
     }
     if (timelineYield.type === 'get-global-abort-signal') {
-      timelineYield.callback(abortSignal)
+      timelineYield.callback(globalAbortSignal)
       continue
     }
     updateRef.current = timelineYield.update
@@ -64,6 +67,7 @@ export async function startAsync<T>(
       return
     }
   }
+  internalAbortController.abort()
 }
 
 export function abortSignalToPromise(signal: AbortSignal) {
