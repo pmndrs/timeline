@@ -1,5 +1,7 @@
 import { Euler, Matrix4, Object3D, Quaternion, Vector3, type AnimationAction } from 'three'
-import { action, parallel, type ReusableTimeline, type ActionUpdate } from './index.js'
+import { action } from './action.js'
+import { type ReusableTimeline, type TimelineYieldActionUpdate } from './index.js'
+import { parallel } from './parallel.js'
 
 /**
  * action until function for executing an action until a certain time has passed
@@ -65,7 +67,7 @@ export async function* doUntil<T>(promise: Promise<unknown>, timeline: ReusableT
  * function for generating a timeline that executes the inner function while a update function returns true
  */
 export async function* doWhile<T>(
-  update: (...params: Parameters<ActionUpdate<T>>) => boolean,
+  update: (...params: Parameters<TimelineYieldActionUpdate<T>>) => boolean,
   timeline: ReusableTimeline<T>,
 ) {
   yield* parallel('race', action({ update }), async function* () {

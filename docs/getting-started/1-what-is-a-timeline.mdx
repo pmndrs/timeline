@@ -11,6 +11,7 @@ At a high level, timelines are composed of actions and sub‑timelines. You chai
 ### Actions
 
 An action is a unit of work you `yield*` from a timeline. It can:
+
 - provide an `update(state, clock)` called every frame; return `false` to finish
 - provide an `until` promise to decide when it finishes
 - or both to run something every frame until another event happens
@@ -20,18 +21,19 @@ Use an action when you want to perform work over time, wait for something to hap
 #### What does an action look like?
 
 ```ts
-yield* action({
-  update: (state, clock) => {
-    // apply changes every frame
-    return false // finish immediately
-  },
-})
+yield *
+  action({
+    update: (state, clock) => {
+      // apply changes every frame
+      return false // finish immediately
+    },
+  })
 ```
 
 #### Waiting with `until`
 
 ```ts
-yield* action({ until: timePassed(1, 'seconds') })
+yield * action({ until: timePassed(1, 'seconds') })
 ```
 
 #### How long does an action run?
@@ -49,7 +51,6 @@ The `clock` passed to `update(state, clock)` contains:
 
 - `delta`: seconds since last frame (internally clamped to ~1/30s)
 - `prevDelta`: previous `delta` or `undefined` on the first frame (used by `spring`/`velocity` to infer velocity)
-- `timelineTime`: total time since the timeline started
 - `actionTime`: time since the current action started (resets between actions)
 
 ### Timelines
@@ -66,7 +67,7 @@ async function* reusableFadeIn() {
 }
 
 // later inside another timeline
-yield* reusableFadeIn()
+yield * reusableFadeIn()
 ```
 
 ### Running timelines
@@ -94,8 +95,8 @@ You can chain actions/timelines sequentially or run them concurrently.
 
 ```ts
 // Sequential
-yield* action(A)
-yield* action(B)
+yield * action(A)
+yield * action(B)
 ```
 
 #### Parallel composition
@@ -104,8 +105,8 @@ yield* action(B)
 - **Race**: `yield* parallel('race', A, B)` continues when the first finishes
 
 ```ts
-yield* parallel('all', A, B)
-yield* parallel('race', A, B)
+yield * parallel('all', A, B)
+yield * parallel('race', A, B)
 ```
 
 ### Sub-timelines
@@ -115,11 +116,11 @@ Timelines compose: you can `yield*` another reusable timeline anywhere. This kee
 ```ts
 // Reusable timeline
 async function* someReusableTimeline() {
-    yield* action({ until: timePassed(0.5, 'seconds') })
+  yield* action({ until: timePassed(0.5, 'seconds') })
 }
 
 // Compose inside another timeline
-yield* someReusableTimeline()
+yield * someReusableTimeline()
 ```
 
 ### Graph timelines
@@ -136,6 +137,90 @@ yield* graph('Idle', {
 })
 ```
 
+### TimelineQueue
+
+Use a queue to sequence reusable timelines that are added dynamically. The queue drains in order until empty each time you run it.
+
+```ts
+const queue = new TimelineQueue()
+
+// Manager timeline: repeatedly drain the queue, then wait for new work
+async function* queueManager() {
+  while (true) {
+    // runs each enqueued timeline sequentially until the queue is empty
+    yield* queue.run()
+    // pause until someone enqueues again
+    yield* action({ until: queue.waitUntilNotEmpty() })
+  }
+}
+
+// Somewhere else: enqueue work
+queue.add(async function* () {
+  yield* action({ until: timePassed(0.5, 'seconds') })
+})
+
+// Insert at a specific position (e.g. front of the queue)
+queue.add(async function* () {
+  /* ... */
+}, 0)
+
+// Clear pending items
+queue.clear()
+```
+
+- **add(timeline, index?)**: enqueue at optional index (default appends). If the queue was empty, any waiters from `waitUntilNotEmpty()` resolve.
+- **run()**: async generator that yields each enqueued timeline in FIFO order until empty.
+- **waitUntilNotEmpty()**: promise that resolves immediately if there are entries, or when the next item is added.
+- **length**: current number of queued timelines.
+
+This is useful for input-driven behaviors (clicks, network events) where you want actions to play back-to-back without interleaving.
+
+### TimelineGraph (class API)
+
+Beyond the `graph(initial, map)` helper, you can control a state machine via the `TimelineGraph` class—add/remove states at runtime, or force transitions.
+
+```ts
+const machine = new TimelineGraph('Idle', {
+  Idle: {
+    timeline: () => action({ update: () => true }), // keep updating until a transition fires
+    transitionTo: {
+      Run: { whenPromise: () => timePassed(1, 'seconds') },
+    },
+  },
+  Run: {
+    timeline: () => action({ until: timePassed(0.5, 'seconds') }),
+    transitionTo: { finally: 'Idle' }, // jump here after timeline completes
+  },
+})
+
+// Start the graph inside a timeline
+yield* machine.run()
+
+// At runtime, you can manipulate it:
+machine.setState('Run')
+machine.addState(
+  'Attack',
+  () => action({ until: timePassed(0.2, 'seconds') }),
+  { finally: 'Idle' },
+)
+machine.removeState('Attack')
+```
+
+Transitions can be expressed with:
+
+- **whenUpdate(state, clock) => boolean**: transition when this returns true
+- **whenPromise: () => Promise**: transition when the promise resolves
+- **finally: 'StateName'**: default next state after the state's `timeline` completes
+
+A state's `timeline` may also return a state name to transition to:
+
+```ts
+async function* Run() {
+  // ... do work ...
+  return 'Idle' // explicit next state
+}
+```
+
 ### Built‑ins for motion
 
 - **Action updates**: `transition`, `lookAt`, `offsetDistance`, `offsetRotation`
@@ -143,6 +228,7 @@ yield* graph('Idle', {
 - **Helpers**: `worldSpace(type, object)`, `property(object, key)`, waits like `timePassed`, `mediaFinished`, `animationFinished`, plus `doUntil`/`doWhile`
 
 Explore full, runnable examples in the tutorials:
+
 - Building your First Timeline
 - Building Complex Timelines using Parallel
 - Building Graph Timelines

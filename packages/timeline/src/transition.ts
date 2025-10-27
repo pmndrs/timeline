@@ -1,7 +1,7 @@
 import { Euler, Quaternion, Vector3 } from 'three'
 import { getPrevious, setPrevious } from './previous.js'
 import { read, write } from './utils.js'
-import type { ActionUpdate, EaseFunction } from './index.js'
+import type { TimelineYieldActionUpdate, EaseFunction } from './index.js'
 
 export type TransitionFrom = Exclude<TransitionTo, number | Array<number>>
 export type TransitionTo = Vector3 | Quaternion | Euler | number | Array<number>
@@ -20,7 +20,7 @@ export function transition<T>(
   from: TransitionFrom | ((newValue?: Vector3 | Quaternion) => TransitionFrom | number),
   to: TransitionTo | (() => TransitionTo),
   ease?: EaseFunction<T>,
-): ActionUpdate<T> {
+): TimelineYieldActionUpdate<T> {
   const goal = read('position', from)
   let current: Vector3 | Quaternion | undefined
   let target: Vector3 | Quaternion | undefined
@@ -43,7 +43,7 @@ export function transition<T>(
     prev.copy(current as any)
     write(target, from)
     if (shouldContinue === false) {
-      setPrevious(from, 'transition', clock, prev)
+      setPrevious(from, 'transition', prev)
     }
     return shouldContinue
   }

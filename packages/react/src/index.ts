@@ -1,4 +1,4 @@
-import { ReusableTimeline, StateMap, start, graph } from '@pmndrs/timeline'
+import { ReusableTimeline, GraphStateMap, start, graph } from '@pmndrs/timeline'
 import { RootState, useFrame } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 
@@ -29,7 +29,7 @@ export function useTimeline(timeline: ReusableTimeline<RootState>, deps: Array<a
  */
 export function useTimelineGraph<S extends object>(
   initialStateName: keyof S,
-  stateMap: StateMap<RootState, S>,
+  stateMap: GraphStateMap<RootState, S>,
   deps: Array<any>,
 ) {
   useTimeline(() => graph(initialStateName, stateMap), deps)

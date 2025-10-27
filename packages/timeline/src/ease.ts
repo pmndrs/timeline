@@ -1,15 +1,14 @@
 import { MathUtils, Quaternion, Vector3 } from 'three'
-import type { ActionClock, ActionUpdate } from './index.js'
+import type { TimelineClock } from './index.js'
 
 export type EaseFunction<T> = (
-  ...params: [
-    ...Parameters<ActionUpdate<T>>,
-    prev: Vector3 | Quaternion | undefined,
-    current: Vector3 | Quaternion,
-    goal: Vector3 | Quaternion,
-    target: Vector3 | Quaternion,
-  ]
-) => ReturnType<ActionUpdate<T>>
+  state: T,
+  clock: TimelineClock,
+  prev: Vector3 | Quaternion | undefined,
+  current: Vector3 | Quaternion,
+  goal: Vector3 | Quaternion,
+  target: Vector3 | Quaternion,
+) => undefined | void | boolean
 
 const offsetQuaternion = new Quaternion()
 const offsetTangent = new Vector3()
@@ -80,7 +79,7 @@ const accelerationVector = new Vector3()
 function velocityEaseComputeVelocity(
   velocity: number,
   maxAcceleration: number | undefined,
-  clock: ActionClock,
+  clock: TimelineClock,
   currentGoalOffset: Vector3,
   target: Vector3,
 ): boolean {
@@ -230,7 +229,7 @@ function springEaseComputeVelocity(
   stiffness: number,
   damping: number,
   maxVelocity: number | undefined,
-  clock: ActionClock,
+  clock: TimelineClock,
   currentGoalOffset: Vector3,
   target: Vector3,
 ): boolean {

@@ -1,5 +1,5 @@
 import { Euler, Object3D, Quaternion, Vector3 } from 'three'
-import { worldSpace, type ActionUpdate } from './index.js'
+import { worldSpace, type TimelineYieldActionUpdate } from './index.js'
 import { getPrevious, setPrevious } from './previous.js'
 import { read, write } from './utils.js'
 import type { EaseFunction } from './ease.js'
@@ -17,7 +17,7 @@ export function offsetDistance<T>(
   to: Vector3 | (() => Vector3) | Object3D,
   distance: number,
   ease?: EaseFunction<T>,
-): ActionUpdate<T> {
+): TimelineYieldActionUpdate<T> {
   if (from instanceof Object3D) {
     from = worldSpace('position', from)
   }
@@ -79,7 +79,7 @@ export function offsetDistance<T>(
     }
 
     if (shouldContinue === false) {
-      setPrevious(from, 'offsetDistance', clock, prev)
+      setPrevious(from, 'offsetDistance', prev)
     }
     return shouldContinue
   }
@@ -102,7 +102,7 @@ export function offsetRotation<T>(
   to: Vector3 | (() => Vector3) | Object3D,
   rotation: Euler | Quaternion | Array<number> | (() => Euler | Quaternion | Array<number>),
   ease?: EaseFunction<T>,
-): ActionUpdate<T> {
+): TimelineYieldActionUpdate<T> {
   if (from instanceof Object3D) {
     from = worldSpace('position', from)
   }
@@ -167,7 +167,7 @@ export function offsetRotation<T>(
     write(nextPosition, from)
 
     if (shouldContinue === false) {
-      setPrevious(from, `offsetRotation`, clock, prev)
+      setPrevious(from, `offsetRotation`, prev)
     }
     return shouldContinue
   }

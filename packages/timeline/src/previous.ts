@@ -1,22 +1,22 @@
 import { Quaternion, Vector3 } from 'three'
-import type { ActionClock } from './index.js'
+import type { TimelineClock } from './index.js'
 
-const previousMap = new Map<string, Map<any, { timelineTime: number; value: Vector3 | Quaternion }>>()
+const previousMap = new Map<string, Map<any, { globalTime: number; value: Vector3 | Quaternion }>>()
 
-export function setPrevious(identifier: any, type: string, clock: ActionClock, value: Vector3 | Quaternion) {
+export function setPrevious(identifier: any, type: string, value: Vector3 | Quaternion) {
   let map = previousMap.get(type)
   if (map == null) {
     previousMap.set(type, (map = new Map()))
   }
-  map.set(identifier, { timelineTime: clock.timelineTime, value: value.clone() })
+  map.set(identifier, { globalTime: performance.now(), value: value.clone() })
 }
 
-export function getPrevious(identifier: any, type: string, clock: ActionClock): Vector3 | Quaternion | undefined {
+export function getPrevious(identifier: any, type: string, clock: TimelineClock): Vector3 | Quaternion | undefined {
   const entry = previousMap.get(type)?.get(identifier)
   if (entry == null) {
     return undefined
   }
-  if (Math.abs(clock.timelineTime - clock.delta - entry.timelineTime) > 0.001) {
+  if (Math.abs(1 - (performance.now() - entry.globalTime) / clock.delta) > 0.5) {
     return undefined
   }
   return entry.value.clone()

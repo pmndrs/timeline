@@ -21,11 +21,10 @@
 npm install three @react-three/fiber @react-three/timeline
 ```
 
-
 ### What does it look like?
 
 | A simple timeline with 2 actions (look at red pill and look at blue pill) with an infinite loop | ![render of the above code](./docs/getting-started/basic-example.gif) |
-| --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 
 ```tsx
 const camera = useThree((s) => s.camera)
@@ -76,7 +75,4 @@ This project is supported by a few companies and individuals building cutting ed
 ## Roadmap
 
 [ ] record, useRecordedTimeline, ... => allows to bind the timeline progress to any controls (e.g. scrolling); allowing using markers to attach scroll positions (e.g. button center screen) to the time of the timeline  
-[ ] yield* cleanup(() => ...)  
-[ ] add external methods for the graph (set/get state externally)  
-[ ] queue with optional priority sorting and cancelation (configure what happens whith the current timeline when canceled)  
 [ ] timeline visualization and `yield* marker(...)` to appear in the visualization (e.g. log values or complete json objects)
