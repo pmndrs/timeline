@@ -19,7 +19,9 @@
     "check:prettier": "prettier --check src",
     "check:eslint": "eslint \"src/**/*.{ts,tsx}\"",
     "fix:prettier": "prettier --write src",
-    "fix:eslint": "eslint \"src/**/*.{ts,tsx}\" --fix"
+    "fix:eslint": "eslint \"src/**/*.{ts,tsx}\" --fix",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest --passWithNoTests"
   },
   "repository": {
     "type": "git",

@@ -14,10 +14,12 @@
 		"prettier": "^3.6.2",
 		"typedoc": "^0.27.0",
 		"typedoc-plugin-frontmatter": "^1.1.0",
-		"typedoc-plugin-markdown": "^4.8.1"
+		"typedoc-plugin-markdown": "^4.8.1",
+		"vitest": "^2.0.0"
 	},
 	"scripts": {
 		"docs:overview": "node scripts/generate-overview.mjs",
-		"docs:test": "node scripts/validate-docs.mjs"
+		"docs:test": "node scripts/validate-docs.mjs",
+		"test": "vitest run"
 	}
 }

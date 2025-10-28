@@ -16,7 +16,11 @@ export async function* scope<T = unknown>(
   const scopeAbortController = new AbortController()
   yield {
     type: 'get-global-abort-signal',
-    callback: (abortSignal) =>
+    callback: (abortSignal) => {
+      if (abortSignal.aborted) {
+        scopeAbortController.abort()
+        return
+      }
       abortSignal.addEventListener(
         'abort',
         //abort because signal was aborted
@@ -26,7 +30,8 @@ export async function* scope<T = unknown>(
           //stop listening once the scope is done either successful or unsuccessful
           signal: scopeAbortController.signal,
         },
-      ),
+      )
+    },
   }
   yield* timeline(scopeAbortController.signal)
   //abort because scope successfully ran through

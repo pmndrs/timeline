@@ -20,9 +20,16 @@ export async function* action<T>(action: Action<T>): NonReuseableTimeline<T> {
   const cleanup = action.init?.()
   const internalAbortController = new AbortController()
   if (cleanup != null) {
+    internalAbortController.signal.addEventListener('abort', cleanup, { once: true })
     yield {
       type: 'get-global-abort-signal',
-      callback: (s) => s.addEventListener('abort', cleanup, { once: true, signal: internalAbortController.signal }),
+      callback: (globalAbortSignal) => {
+        if (globalAbortSignal.aborted) {
+          cleanup()
+          return
+        }
+        globalAbortSignal.addEventListener('abort', cleanup, { once: true, signal: internalAbortController.signal })
+      },
     }
   }
   if (action.until != null) {
@@ -66,6 +73,5 @@ export async function* action<T>(action: Action<T>): NonReuseableTimeline<T> {
   yield timelineYield
   if (!internalAbortController.signal.aborted) {
     internalAbortController.abort()
-    cleanup?.()
   }
 }
