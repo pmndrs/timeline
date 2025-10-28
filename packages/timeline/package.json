@@ -15,7 +15,7 @@
     "timeline"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --p tsconfig.build.json",
     "check:prettier": "prettier --check src",
     "check:eslint": "eslint \"src/**/*.{ts,tsx}\"",
     "fix:prettier": "prettier --write src",
