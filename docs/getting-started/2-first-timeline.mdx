@@ -23,14 +23,14 @@ This walks you through building the intro example from scratch.
 import { Text, Environment } from '@react-three/drei'
 import { useRef } from 'react'
 import { Mesh } from 'three'
-import { useTimeline, action, lookAt, spring, springPresets } from '@react-three/timeline'
+import { useRunTimeline, action, lookAt, spring, springPresets } from '@react-three/timeline'
 
 function Scene() {
   const camera = useThree((s) => s.camera)
   const red = useRef<Mesh>(null)
   const blue = useRef<Mesh>(null)
 
-  useTimeline(async function* () {
+  useRunTimeline(async function* () {
     while (true) {
       yield* action({ update: lookAt(camera, red.current!, spring(springPresets.stiff)) })
       yield* action({ update: lookAt(camera, blue.current!, spring(springPresets.stiff)) })
@@ -142,7 +142,7 @@ function Scene() {
   const red = useRef<Mesh>(null)
   const blue = useRef<Mesh>(null)
 
-  useTimeline(async function* () {
+  useRunTimeline(async function* () {
     while (true) {
       yield* action({ update: lookAt(camera, red.current!, spring(springPresets.stiff)) })
       yield* action({ update: lookAt(camera, blue.current!, spring(springPresets.stiff)) })

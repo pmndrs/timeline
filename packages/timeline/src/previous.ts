@@ -16,7 +16,7 @@ export function getPrevious(identifier: any, type: string, clock: TimelineClock)
   if (entry == null) {
     return undefined
   }
-  if (Math.abs(1 - (performance.now() - entry.globalTime) / clock.delta) > 0.5) {
+  if (Math.abs(1 - (performance.now() - entry.globalTime) / 1000 / clock.delta) > 0.5) {
     return undefined
   }
   return entry.value.clone()

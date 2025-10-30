@@ -8,6 +8,7 @@ export type EaseFunction<T> = (
   current: Vector3 | Quaternion,
   goal: Vector3 | Quaternion,
   target: Vector3 | Quaternion,
+  memo: Record<string, any>,
 ) => undefined | void | boolean
 
 const offsetQuaternion = new Quaternion()
@@ -23,9 +24,7 @@ const offsetVector = new Vector3()
  * @param maxAcceleration (optional) can be used to limit the change in velocity
  */
 export function velocity(velocity: number, maxAcceleration?: number): EaseFunction<unknown> {
-  let velocityVector: Vector3 | undefined
-
-  return (_state, clock, prev, current, goal, target) => {
+  return (_state, clock, prev, current, goal, target, memo: { velocityVector?: Vector3 }) => {
     if (current instanceof Quaternion) {
       offsetQuaternion
         .copy(current)
@@ -33,22 +32,28 @@ export function velocity(velocity: number, maxAcceleration?: number): EaseFuncti
         .premultiply(goal as Quaternion)
       quaternionToTangentSpace(offsetQuaternion, offsetTangent, clock.delta)
 
-      if (velocityVector == null && prev != null && clock.prevDelta != null) {
-        velocityVector = new Vector3()
+      if (memo.velocityVector == null && prev != null && clock.prevDelta != null) {
+        memo.velocityVector = new Vector3()
         prevOffsetQuaternion
           .copy(prev as Quaternion)
           .invert()
           .premultiply(current)
-        quaternionToTangentSpace(prevOffsetQuaternion, velocityVector, clock.prevDelta)
-        velocityVector.divideScalar(clock.prevDelta)
+        quaternionToTangentSpace(prevOffsetQuaternion, memo.velocityVector, clock.prevDelta)
+        memo.velocityVector.divideScalar(clock.prevDelta)
       }
 
-      if (velocityVector == null) {
-        velocityVector = new Vector3(0, 0, 0)
+      if (memo.velocityVector == null) {
+        memo.velocityVector = new Vector3(0, 0, 0)
       }
 
-      let shouldContinue = velocityEaseComputeVelocity(velocity, maxAcceleration, clock, offsetTangent, velocityVector)
-      deltaTangent.copy(velocityVector).multiplyScalar(clock.delta)
+      let shouldContinue = velocityEaseComputeVelocity(
+        velocity,
+        maxAcceleration,
+        clock,
+        offsetTangent,
+        memo.velocityVector,
+      )
+      deltaTangent.copy(memo.velocityVector).multiplyScalar(clock.delta)
 
       tangentSpaceToQuaternion(deltaTangent, deltaQuaternion)
       ;(target as Quaternion).multiplyQuaternions(deltaQuaternion, current)
@@ -56,17 +61,23 @@ export function velocity(velocity: number, maxAcceleration?: number): EaseFuncti
     }
 
     offsetVector.subVectors(goal, current)
-    if (velocityVector == null && prev != null && clock.prevDelta != null) {
-      velocityVector = new Vector3().subVectors(current, prev).divideScalar(clock.prevDelta)
+    if (memo.velocityVector == null && prev != null && clock.prevDelta != null) {
+      memo.velocityVector = new Vector3().subVectors(current, prev).divideScalar(clock.prevDelta)
     }
 
-    if (velocityVector == null) {
-      velocityVector = new Vector3(0, 0, 0)
+    if (memo.velocityVector == null) {
+      memo.velocityVector = new Vector3(0, 0, 0)
     }
 
-    let shouldContinue = velocityEaseComputeVelocity(velocity, maxAcceleration, clock, offsetVector, velocityVector)
+    let shouldContinue = velocityEaseComputeVelocity(
+      velocity,
+      maxAcceleration,
+      clock,
+      offsetVector,
+      memo.velocityVector,
+    )
 
-    ;(target as Vector3).copy(current).addScaledVector(velocityVector, clock.delta)
+    ;(target as Vector3).copy(current).addScaledVector(memo.velocityVector, clock.delta)
     return shouldContinue
   }
 }
@@ -111,9 +122,10 @@ function velocityEaseComputeVelocity(
  * action update easing function for a linear ease based on the provided duration in seconds
  */
 export function time(duration: number): EaseFunction<unknown> {
-  return (_state, clock, _prev, current, goal, target) => {
+  return (_state, clock, _prev, current, goal, target, memo: { duration?: number }) => {
+    memo.duration ??= duration
     //0 means only current and 1 means only goal
-    const slerpValue = Math.min(1, clock.delta / duration)
+    const slerpValue = Math.min(1, clock.delta / memo.duration)
     if (target instanceof Vector3) {
       target
         .set(0, 0, 0)
@@ -123,9 +135,9 @@ export function time(duration: number): EaseFunction<unknown> {
       target.copy(current as Quaternion).slerp(goal as Quaternion, slerpValue)
     }
 
-    duration -= Math.min(duration, clock.delta)
+    memo.duration -= Math.min(memo.duration, clock.delta)
 
-    if (duration <= 0) {
+    if (memo.duration <= 0) {
       return false
     }
     return true
@@ -148,9 +160,7 @@ export function spring(
   const stiffness = config.stiffness
   const damping = config.damping
 
-  let velocityVector: Vector3 | undefined
-
-  return (_state, clock, prev, current, goal, target) => {
+  return (_state, clock, prev, current, goal, target, memo: { velocityVector?: Vector3 }) => {
     if (current instanceof Quaternion) {
       offsetQuaternion
         .copy(current)
@@ -158,18 +168,18 @@ export function spring(
         .premultiply(goal as Quaternion)
       quaternionToTangentSpace(offsetQuaternion, offsetTangent, clock.delta)
 
-      if (velocityVector == null && prev != null && clock.prevDelta != null) {
-        velocityVector = new Vector3()
+      if (memo.velocityVector == null && prev != null && clock.prevDelta != null) {
+        memo.velocityVector = new Vector3()
         prevOffsetQuaternion
           .copy(prev as Quaternion)
           .invert()
           .premultiply(current)
-        quaternionToTangentSpace(prevOffsetQuaternion, velocityVector, clock.prevDelta)
-        velocityVector.divideScalar(clock.prevDelta)
+        quaternionToTangentSpace(prevOffsetQuaternion, memo.velocityVector, clock.prevDelta)
+        memo.velocityVector.divideScalar(clock.prevDelta)
       }
 
-      if (velocityVector == null) {
-        velocityVector = new Vector3(0, 0, 0)
+      if (memo.velocityVector == null) {
+        memo.velocityVector = new Vector3(0, 0, 0)
       }
 
       let shouldContinue = springEaseComputeVelocity(
@@ -179,10 +189,10 @@ export function spring(
         config.maxVelocity,
         clock,
         offsetTangent,
-        velocityVector,
+        memo.velocityVector,
       )
 
-      deltaTangent.copy(velocityVector).multiplyScalar(clock.delta)
+      deltaTangent.copy(memo.velocityVector).multiplyScalar(clock.delta)
 
       tangentSpaceToQuaternion(deltaTangent, deltaQuaternion)
       ;(target as Quaternion).multiplyQuaternions(deltaQuaternion, current)
@@ -190,12 +200,12 @@ export function spring(
     }
 
     offsetVector.subVectors(goal, current)
-    if (velocityVector == null && prev != null && clock.prevDelta != null) {
-      velocityVector = new Vector3().subVectors(current, prev).divideScalar(clock.prevDelta)
+    if (memo.velocityVector == null && prev != null && clock.prevDelta != null) {
+      memo.velocityVector = new Vector3().subVectors(current, prev).divideScalar(clock.prevDelta)
     }
 
-    if (velocityVector == null) {
-      velocityVector = new Vector3(0, 0, 0)
+    if (memo.velocityVector == null) {
+      memo.velocityVector = new Vector3(0, 0, 0)
     }
 
     let shouldContinue = springEaseComputeVelocity(
@@ -205,10 +215,10 @@ export function spring(
       config.maxVelocity,
       clock,
       offsetVector,
-      velocityVector,
+      memo.velocityVector,
     )
 
-    ;(target as Vector3).copy(current).addScaledVector(velocityVector, clock.delta)
+    ;(target as Vector3).copy(current).addScaledVector(memo.velocityVector, clock.delta)
     return shouldContinue
   }
 }

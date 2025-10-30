@@ -8,8 +8,8 @@ nav: 7
 
 ### Differences to React usage
 
-- In React you use `useTimeline(...)` which ties into the render loop for you.
-- In vanilla you call `start(timeline)` and invoke the returned function every frame with `deltaSeconds` (the library internally clamps large deltas to ~1/30s for stability).
+- In React you use `useRunTimeline(...)` which ties into the render loop for you.
+- In vanilla you call `runTimeline(timeline)` and invoke the returned function every frame with `deltaSeconds` (the library internally clamps large deltas to ~1/30s for stability).
 
 ## Build a scene with `@pmndrs/timeline`
 
@@ -25,7 +25,7 @@ Below is a complete example using two spheres and a camera that alternates betwe
     },
   }}
   files={{
-    '/index.ts': `import { action, lookAt, spring, springPresets, start, timePassed } from '@pmndrs/timeline'
+    '/index.ts': `import { action, lookAt, spring, springPresets, runTimeline, timePassed } from '@pmndrs/timeline'
 import { EffectComposer, RenderPass, EffectPass, BloomEffect, VignetteEffect } from 'postprocessing'
 import { PerspectiveCamera, Scene, WebGLRenderer, Color, Mesh, MeshPhysicalMaterial, SphereGeometry, ACESFilmicToneMapping, AmbientLight, SRGBColorSpace, PMREMGenerator, HalfFloatType, MeshStandardMaterial } from 'three'
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
@@ -110,7 +110,7 @@ async function* mainTimeline() {
     yield* action({ until: timePassed(0.3, 'seconds') })
   }
 }
-const update = start(mainTimeline())
+const update = runTimeline(mainTimeline())
 
 // render loop
 let last = performance.now()
@@ -215,7 +215,7 @@ async function* mainTimeline() {
     yield* action({ until: timePassed(0.3, 'seconds') })
   }
 }
-const update = start(mainTimeline())
+const update = runTimeline(mainTimeline())
 ```
 
 5) Drive frames and handle resize

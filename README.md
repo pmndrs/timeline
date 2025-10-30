@@ -31,7 +31,7 @@ const camera = useThree((s) => s.camera)
 const redPill = useRef<Mesh>(null)
 const bluePill = useRef<Mesh>(null)
 
-useTimeline(async function* () {
+useRunTimeline(async function* () {
   while (true) {
     //transition to look at the red pill
     yield* action({ update: lookAt(camera, redPill.current!, spring()) })

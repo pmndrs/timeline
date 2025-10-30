@@ -30,9 +30,9 @@ export type Update<T> = (state: T, delta: number) => void
  * function for starting a timeline
  * @returns an update function which must be executed every frame with the delta time in seconds
  */
-export function start<T>(timeline: Timeline<T>, abortSignal?: AbortSignal, onError = console.error): Update<T> {
+export function runTimeline<T>(timeline: Timeline<T>, abortSignal?: AbortSignal, onError = console.error): Update<T> {
   const ref: { current?: TimelineYieldActionUpdate<T> } = {}
-  startAsync(timeline, ref, abortSignal).catch(onError)
+  runTimelineAsync(timeline, ref, abortSignal).catch(onError)
   const clock: TimelineClock = { delta: 0, prevDelta: 0 }
   return (state, delta) => {
     clock.delta = delta
@@ -41,7 +41,12 @@ export function start<T>(timeline: Timeline<T>, abortSignal?: AbortSignal, onErr
   }
 }
 
-export async function startAsync<T>(
+/**
+ * @deprecated use `runTimeline` instead
+ */
+export const start = runTimeline
+
+export async function runTimelineAsync<T>(
   timeline: Timeline<T>,
   updateRef: { current?: TimelineYieldActionUpdate<T> },
   abortSignal: AbortSignal = new AbortController().signal,
@@ -71,6 +76,9 @@ export async function startAsync<T>(
 }
 
 export function abortSignalToPromise(signal: AbortSignal) {
+  if (signal.aborted) {
+    return Promise.resolve()
+  }
   return new Promise<unknown>((resolve) => signal.addEventListener('abort', resolve, { once: true }))
 }
 
@@ -80,10 +88,14 @@ export * from './look-at.js'
 export * from './offset.js'
 export * from './ease.js'
 export * from './transition.js'
-export * from './replace.js'
+export * from './replaceable.js'
 export * from './previous.js'
 export * from './parallel.js'
 export * from './queue.js'
 export * from './action.js'
 export * from './scope.js'
 export * from './abortable.js'
+export * from './sequential.js'
+export * from './singleton.js'
+export * from './switch.js'
+export * from './register.js'

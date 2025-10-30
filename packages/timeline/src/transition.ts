@@ -22,28 +22,35 @@ export function transition<T>(
   ease?: EaseFunction<T>,
 ): ActionUpdate<T> {
   const goal = read('position', from)
-  let current: Vector3 | Quaternion | undefined
-  let target: Vector3 | Quaternion | undefined
-  let prev: Vector3 | Quaternion | undefined | null = null
-  return (state, clock) => {
-    if (prev === null) {
-      prev = getPrevious(from, 'transition', clock)
+  return (
+    state,
+    clock,
+    _,
+    memo: {
+      prev?: Quaternion | Vector3
+      current?: Quaternion | Vector3
+      target?: Quaternion | Vector3
+      easeMemo?: Record<string, any>
+    },
+  ) => {
+    if (memo.prev === null) {
+      memo.prev = getPrevious(from, 'transition', clock)
     }
     read('position', to, goal)
-    current = read('position', from, current)
+    memo.current = read('position', from, memo.current)
     //apply ease function
     if (ease == null) {
       write(goal, from)
       return false
     }
-    target ??= goal.clone()
-    const shouldContinue = ease(state, clock, prev, current, goal, target)
+    memo.target ??= goal.clone()
+    const shouldContinue = ease(state, clock, memo.prev, memo.current, goal, memo.target, (memo.easeMemo ??= {}))
     //build preview (create and fill with current)
-    prev ??= current.clone()
-    prev.copy(current as any)
-    write(target, from)
+    memo.prev ??= memo.current.clone()
+    memo.prev.copy(memo.current as any)
+    write(memo.target, from)
     if (shouldContinue === false) {
-      setPrevious(from, 'transition', prev)
+      setPrevious(from, 'transition', memo.prev)
     }
     return shouldContinue
   }

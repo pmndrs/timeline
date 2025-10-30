@@ -1,6 +1,6 @@
 import { ReusableTimeline, scope } from './index.js'
 
-export class TimelineQueue<T = unknown> {
+export class QueueTimeline<T = unknown> {
   private readonly entries: Array<ReusableTimeline<T>> = []
   private readonly notEmptyListeners: Array<() => void> = []
   private running = false
@@ -29,7 +29,7 @@ export class TimelineQueue<T = unknown> {
     })
   }
 
-  add(timeline: ReusableTimeline<T>, index = Infinity): void {
+  attach(timeline: ReusableTimeline<T>, index = Infinity): void {
     const wasEmpty = this.entries.length === 0
     index = Math.max(0, Math.min(this.entries.length, Math.floor(index)))
     this.entries.splice(index, 0, timeline)

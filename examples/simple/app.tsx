@@ -1,8 +1,18 @@
 import { Environment, Text } from '@react-three/drei'
 import { Canvas, useThree } from '@react-three/fiber'
 import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing'
-import { useTimeline, action, lookAt, spring, springPresets, timePassed } from '@react-three/timeline'
-import { useRef } from 'react'
+import {
+  lookAt,
+  RunTimeline,
+  Loop,
+  Sequential,
+  SequentialEntry,
+  Action,
+  spring,
+  springPresets,
+} from '@react-three/timeline'
+import { useControls } from 'leva'
+import { useState } from 'react'
 import { Mesh } from 'three'
 
 export function App() {
@@ -26,31 +36,78 @@ export function App() {
 
 function Scene() {
   const camera = useThree((s) => s.camera)
-  const redPill = useRef<Mesh>(null)
-  const bluePill = useRef<Mesh>(null)
+  const [redPill, setRedPill] = useState<Mesh | undefined>(undefined)
+  const [greenPill, setGreenPill] = useState<Mesh | undefined>(undefined)
+  const [bluePill, setBluePill] = useState<Mesh | undefined>(undefined)
 
-  useTimeline(async function* () {
-    while (true) {
-      yield* action({ update: lookAt(camera, redPill.current!, spring(springPresets.stiff)) })
-      yield* action({ until: timePassed(0.3, 'seconds') })
-      yield* action({ update: lookAt(camera, bluePill.current!, spring(springPresets.stiff)) })
-      yield* action({ until: timePassed(0.3, 'seconds') })
-    }
-  }, [])
+  const { blue, green, red } = useControls({ red: true, green: true, blue: true })
 
   return (
     <>
-      <Text position-y={1} scale={0.3}>
+      <RunTimeline>
+        <Loop>
+          <Sequential>
+            {redPill && red && (
+              <SequentialEntry index={0}>
+                <Action update={lookAt(camera, redPill, spring(springPresets.stiff))} />
+              </SequentialEntry>
+            )}
+            {greenPill && green && (
+              <SequentialEntry index={1}>
+                <Action update={lookAt(camera, greenPill, spring(springPresets.stiff))} />
+              </SequentialEntry>
+            )}
+            {bluePill && blue && (
+              <SequentialEntry index={2}>
+                <Action update={lookAt(camera, bluePill, spring(springPresets.stiff))} />
+              </SequentialEntry>
+            )}
+          </Sequential>
+        </Loop>
+      </RunTimeline>
+
+      <Text position-y={0.6} scale={0.3}>
         Remember: all I'm offering is the truth. Nothing more.
       </Text>
-      <mesh position-y={-1} position-x={-2} rotation-y={(-30 / 180) * Math.PI} scale={0.2} scale-z={0.4} ref={redPill}>
-        <sphereGeometry />
-        <meshPhysicalMaterial emissive="red" emissiveIntensity={0.5} color="red" />
-      </mesh>
-      <mesh position-y={-1} position-x={2} rotation-y={(20 / 180) * Math.PI} scale={0.2} scale-z={0.4} ref={bluePill}>
-        <sphereGeometry />
-        <meshPhysicalMaterial emissive="blue" emissiveIntensity={5} color="blue" />
-      </mesh>
+      {red && (
+        <mesh
+          position-y={-1}
+          position-x={-2}
+          rotation-y={(-30 / 180) * Math.PI}
+          scale={0.2}
+          scale-z={0.4}
+          ref={setRedPill}
+        >
+          <sphereGeometry />
+          <meshPhysicalMaterial emissive="red" emissiveIntensity={0.5} color="red" />
+        </mesh>
+      )}
+      {blue && (
+        <mesh
+          position-y={2}
+          position-x={0}
+          rotation-y={(20 / 180) * Math.PI}
+          scale={0.2}
+          scale-z={0.4}
+          ref={setBluePill}
+        >
+          <sphereGeometry />
+          <meshPhysicalMaterial emissive="blue" emissiveIntensity={5} color="blue" />
+        </mesh>
+      )}
+      {green && (
+        <mesh
+          position-y={-1}
+          position-x={2}
+          rotation-y={(20 / 180) * Math.PI}
+          scale={0.2}
+          scale-z={0.4}
+          ref={setGreenPill}
+        >
+          <sphereGeometry />
+          <meshPhysicalMaterial emissive="green" emissiveIntensity={5} color="green" />
+        </mesh>
+      )}
     </>
   )
 }

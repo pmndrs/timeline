@@ -1,4 +1,4 @@
-import { action, lookAt, spring, springPresets, start, timePassed } from '@pmndrs/timeline'
+import { action, lookAt, spring, springPresets, runTimeline, timePassed } from '@pmndrs/timeline'
 import { EffectComposer, RenderPass, EffectPass, BloomEffect, VignetteEffect } from 'postprocessing'
 import {
   PerspectiveCamera,
@@ -114,7 +114,7 @@ async function* mainTimeline() {
   }
 }
 
-const update = start(mainTimeline())
+const update = runTimeline(mainTimeline())
 
 // animate
 let lastTimeMs = performance.now()

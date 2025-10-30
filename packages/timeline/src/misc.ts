@@ -3,6 +3,16 @@ import { action } from './action.js'
 import { type ReusableTimeline, type ActionUpdate } from './index.js'
 import { parallel } from './parallel.js'
 
+export const TimelineFallbacks = {
+  async *Error() {
+    throw new Error('timeline not found')
+  },
+  async *Skip() {},
+  async *Idle() {
+    await new Promise(() => {})
+  },
+}
+
 /**
  * action until function for executing an action until a certain time has passed
  */

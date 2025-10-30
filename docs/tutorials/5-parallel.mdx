@@ -25,7 +25,7 @@ The following demo shows how the left cube constantly moves since it has to cove
     '/App.tsx': `import { Canvas, useThree } from '@react-three/fiber'
 import { useRef } from 'react'
 import { Mesh, Vector3 } from 'three'
-import { useTimeline, action, parallel, transition, velocity } from '@react-three/timeline'
+import { useRunTimeline, action, parallel, transition, velocity } from '@react-three/timeline'
 
 async function* moveTo(ref: React.RefObject<Mesh>, to: Vector3) {
 if (!ref.current) return
@@ -35,7 +35,7 @@ yield* action({ update: transition(ref.current.position, to, velocity(1, 5)) })
 function Scene() {
 const cubeA = useRef<Mesh>(null)
 const cubeB = useRef<Mesh>(null)
-useTimeline(async function* () {
+useRunTimeline(async function* () {
 while (true) {
 yield* parallel('all', moveTo(cubeA, new Vector3(-3.5, 0.5, 0)), moveTo(cubeB, new Vector3(1.5, -0.5, 0)))
 // Then nudge both back to origin, racing the first finisher
@@ -126,7 +126,7 @@ import { Vector3 } from 'three'
 function Scene() {
   const cubeA = useRef<Mesh>(null)
   const cubeB = useRef<Mesh>(null)
-  useTimeline(async function* () {
+  useRunTimeline(async function* () {
     while (true) {
       yield* parallel('all', moveTo(cubeA, new Vector3(-3.5, 0.5, 0)), moveTo(cubeB, new Vector3(1.5, -0.5, 0)))
       yield* parallel('all', moveTo(cubeA, new Vector3(0, 0, 0)), moveTo(cubeB, new Vector3(0, 0, 0)))

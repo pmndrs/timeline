@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createDeferred, step, waitForSetup, waitForCleanup } from './helpers.js'
-import { start, action, parallel } from '../src/index.js'
+import { runTimeline, action, parallel } from '../src/index.js'
 
 describe('parallel cleanup', () => {
   it("parallel('race') aborts remaining timelines and calls their cleanup", async () => {
@@ -28,7 +28,7 @@ describe('parallel cleanup', () => {
       until: done.promise, // will be aborted by race
     })
 
-    const update = start(parallel('race', t1, t2, t3))
+    const update = runTimeline(parallel('race', t1, t2, t3))
     await waitForSetup()
     step(update, 2)
     await waitForCleanup()
@@ -53,7 +53,7 @@ describe('parallel cleanup', () => {
       until: b.promise,
     })
 
-    const update = start(parallel('all', t1, t2))
+    const update = runTimeline(parallel('all', t1, t2))
     await waitForSetup()
     step(update, 1)
     a.resolve()

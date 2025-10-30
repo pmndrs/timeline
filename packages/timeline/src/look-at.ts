@@ -36,10 +36,9 @@ export function lookAt<T>(
   const goal = new Quaternion()
   const current = new Quaternion()
   const target = new Quaternion()
-  let prev: Quaternion | undefined | null = null
-  return (state, clock) => {
-    if (prev === null) {
-      prev = getPrevious(from.rotation, 'lookAt', clock) as Quaternion
+  return (state, clock, _, memo: { prev?: Quaternion; easeMemo?: Record<string, any> }) => {
+    if (memo.prev == null) {
+      memo.prev = getPrevious(from.rotation, 'lookAt', clock) as Quaternion | undefined
     }
     // read current orientation as quaternion
     read('rotation', from.rotation, current)
@@ -58,15 +57,15 @@ export function lookAt<T>(
       return false
     }
 
-    const shouldContinue = ease(state, clock, prev, current, goal, target)
+    const shouldContinue = ease(state, clock, memo.prev, current, goal, target, (memo.easeMemo ??= {}))
 
     // update prev with current snapshot
-    prev ??= current.clone()
-    prev.copy(current)
+    memo.prev ??= current.clone()
+    memo.prev.copy(current)
 
     write(target, from.rotation)
     if (shouldContinue === false) {
-      setPrevious(from.rotation, 'lookAt', prev)
+      setPrevious(from.rotation, 'lookAt', memo.prev)
     }
     return shouldContinue
   }

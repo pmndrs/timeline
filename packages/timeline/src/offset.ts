@@ -26,18 +26,17 @@ export function offsetDistance<T>(
   }
   const goal = new Vector3(distance, 0, 0)
   const current = new Vector3()
-  let target = new Vector3()
-  let prev: Vector3 | undefined | null = null
 
   const fromPosition = new Vector3()
   const toPosition = new Vector3()
   const offset = new Vector3()
   const scaled = new Vector3()
   const nextPosition = new Vector3()
+  const target = new Vector3()
 
-  return (state, clock) => {
-    if (prev === null) {
-      prev = getPrevious(from, 'offsetDistance', clock) as Vector3
+  return (state, clock, _, memo: { prev?: Vector3; easeMemo?: Record<string, any> }) => {
+    if (memo.prev === null) {
+      memo.prev = getPrevious(from, 'offsetDistance', clock) as Vector3 | undefined
     }
     read('position', from, fromPosition)
     read('position', to, toPosition)
@@ -60,12 +59,11 @@ export function offsetDistance<T>(
       return false
     }
 
-    target ??= goal.clone()
-    const shouldContinue = ease(state, clock, prev, current, goal, target)
+    const shouldContinue = ease(state, clock, memo.prev, current, goal, target, (memo.easeMemo ??= {}))
 
     // update prev with snapshot of current scalar distance
-    prev ??= new Vector3()
-    prev.copy(current)
+    memo.prev ??= new Vector3()
+    memo.prev.copy(current)
 
     // compute new position at target distance along current direction
     const nextDistance = target.x
@@ -79,7 +77,7 @@ export function offsetDistance<T>(
     }
 
     if (shouldContinue === false) {
-      setPrevious(from, 'offsetDistance', prev)
+      setPrevious(from, 'offsetDistance', memo.prev)
     }
     return shouldContinue
   }
@@ -110,9 +108,7 @@ export function offsetRotation<T>(
     to = worldSpace('position', to)
   }
   const goal = new Quaternion()
-  let current: Quaternion | undefined
   const target = new Quaternion()
-  let prev: Quaternion | undefined | null = null
 
   const fromPosition = new Vector3()
   const toPosition = new Vector3()
@@ -125,7 +121,7 @@ export function offsetRotation<T>(
     .crossVectors(Object3D.DEFAULT_UP.dot(XVector) > 0.9 ? YVEctor : XVector, Object3D.DEFAULT_UP)
     .normalize()
 
-  return (state, clock) => {
+  return (state, clock, _, memo: { prev?: Quaternion; current?: Quaternion; easeMemo?: Record<string, any> }) => {
     // read positions
     read('position', from, fromPosition)
     read('position', to, toPosition)
@@ -135,8 +131,8 @@ export function offsetRotation<T>(
     // derive goal quaternion from provided rotation
     read('rotation', rotation, goal)
 
-    if (prev === null) {
-      prev = getPrevious(from, `offsetRotation`, clock) as Quaternion
+    if (memo.prev === null) {
+      memo.prev = getPrevious(from, `offsetRotation`, clock) as Quaternion
     }
 
     if (ease == null) {
@@ -147,18 +143,18 @@ export function offsetRotation<T>(
       return false
     }
 
-    if (current == null) {
+    if (memo.current == null) {
       //compute current rotation based on the "baseOffset"
-      current = new Quaternion()
-      current.setFromUnitVectors(forwardVector, normalizedBaseOffset.copy(baseOffset).normalize())
+      memo.current = new Quaternion()
+      memo.current.setFromUnitVectors(forwardVector, normalizedBaseOffset.copy(baseOffset).normalize())
     }
 
-    const shouldContinue = ease(state, clock, prev, current, goal, target)
+    const shouldContinue = ease(state, clock, memo.prev, memo.current, goal, target, (memo.easeMemo ??= {}))
 
     // update prev snapshot
-    prev ??= new Quaternion()
-    prev.copy(current)
-    current.copy(target)
+    memo.prev ??= new Quaternion()
+    memo.prev.copy(memo.current)
+    memo.current.copy(target)
 
     // apply target rotation to the base offset and write new position
     rotatedOffset.copy(forwardVector).multiplyScalar(baseOffsetLength).applyQuaternion(target)
@@ -167,7 +163,7 @@ export function offsetRotation<T>(
     write(nextPosition, from)
 
     if (shouldContinue === false) {
-      setPrevious(from, `offsetRotation`, prev)
+      setPrevious(from, `offsetRotation`, memo.prev)
     }
     return shouldContinue
   }

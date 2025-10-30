@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { step, waitForSetup, waitForCleanup } from './helpers.js'
-import { start, action } from '../src/index.js'
+import { runTimeline, action } from '../src/index.js'
 
 describe('action cleanup', () => {
   it('calls cleanup when update returns false', async () => {
@@ -11,7 +11,7 @@ describe('action cleanup', () => {
       },
       update: () => false,
     })
-    const update = start(timeline)
+    const update = runTimeline(timeline)
     await waitForSetup()
     step(update) // one frame triggers update -> false
     await waitForCleanup()
@@ -27,7 +27,7 @@ describe('action cleanup', () => {
       },
       until,
     })
-    const update = start(timeline)
+    const update = runTimeline(timeline)
     await waitForSetup()
     step(update, 1)
     await waitForCleanup()
@@ -45,7 +45,7 @@ describe('action cleanup', () => {
         // keep running until external abort
       },
     })
-    const update = start(timeline, ctrl.signal)
+    const update = runTimeline(timeline, ctrl.signal)
     await waitForSetup()
     step(update, 2)
     ctrl.abort()

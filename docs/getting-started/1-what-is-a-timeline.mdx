@@ -72,15 +72,15 @@ yield * reusableFadeIn()
 
 ### Running timelines
 
-- **React**: use `useTimeline(reusableTimeline, deps)`; it wires into `useFrame` and restarts on `deps` change.
-- **Vanilla**: use `start(reusableTimeline)` to get an update function you call each frame with `deltaSeconds`.
+- **React**: use `useRunTimelinereusableTimeline, deps)`; it wires into `useFrame` and restarts on `deps` change.
+- **Vanilla**: use `runTimeline(reusableTimeline)` to get an update function you call each frame with `deltaSeconds`.
 
 ```ts
 // React
-useTimeline(() => reusableFadeIn(), [someDep])
+useRunTimeline(() => reusableFadeIn(), [someDep])
 
 // Vanilla
-const update = start(reusableFadeIn)
+const update = runTimeline(reusableFadeIn)
 // in your render loop
 update(state, deltaSeconds)
 ```

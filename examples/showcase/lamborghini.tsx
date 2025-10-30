@@ -13,7 +13,7 @@ import {
   springPresets,
   timePassed,
   transition,
-  useTimeline,
+  useRunTimeline,
   velocity,
 } from '@react-three/timeline'
 import { useEffect, useMemo } from 'react'
@@ -41,7 +41,7 @@ export function Lamborghini(props: any) {
   }, [scene])
   useEffect(() => scene.traverse((object) => (object.castShadow = true)), [scene])
   const camera = useThree((s) => s.camera)
-  useTimeline(
+  useRunTimeline(
     async function* () {
       const wheels = ['RR', 'RL', 'FR', 'FL'].map((name) => scene.getObjectByName(name))
       const frontWheels = ['FR', 'FL'].map((name) => scene.getObjectByName(name))
