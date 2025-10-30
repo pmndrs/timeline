@@ -1,4 +1,4 @@
-import { NonReuseableTimeline, ReusableTimeline, timePassed } from './index.js'
+import { action, NonReuseableTimeline, ReusableTimeline, timePassed } from './index.js'
 import { Singleton } from './singleton.js'
 
 export class SequentialTimeline<T> extends Singleton<T> {
@@ -27,7 +27,7 @@ export class SequentialTimeline<T> extends Singleton<T> {
       yield* timeline()
     }
     if (!ranAnyTimeline) {
-      await timePassed(50, 'milliseconds')
+      yield* action({ until: timePassed(50, 'milliseconds') })
     }
   }
 }

@@ -86,7 +86,7 @@ export class GraphTimeline<T> extends Singleton<T> {
           return
         }
         //if nothing is set for finally, we just do nothing
-        await forever()
+        yield* action({ until: forever() })
       })
     })
   }

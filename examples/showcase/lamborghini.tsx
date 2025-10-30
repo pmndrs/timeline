@@ -56,12 +56,12 @@ export function Lamborghini(props: any) {
         TextYOffset.forEach((offset) => (offset.value = 500))
         PressStartVisible.value = 'visible'
 
-        await new Promise((resolve) => window.addEventListener('click', resolve))
+        yield* action({ until: new Promise((resolve) => window.addEventListener('click', resolve)) })
         PressStartVisible.value = 'hidden'
         const audio = document.createElement('audio')
         audio.src = './background.mp3'
         document.body.appendChild(audio)
-        await audio.play()
+        yield* action({ until: audio.play() })
         const boundingBox = new THREE.Box3()
         bvh.getBoundingBox(boundingBox)
 
@@ -75,7 +75,7 @@ export function Lamborghini(props: any) {
                 yield* parallel(
                   'all',
                   ...TextOpacities.map(async function* (opacity, i) {
-                    await timePassed(i * 0.05, 'seconds')
+                    yield* action({ until: timePassed(i * 0.05, 'seconds') })
                     yield* action({
                       update: [
                         transition(property(opacity, 'value'), 1, spring(springPresets.wobbly)),
@@ -84,7 +84,7 @@ export function Lamborghini(props: any) {
                     })
                   }),
                 )
-                await timePassed(1, 'seconds')
+                yield* action({ until: timePassed(1, 'seconds') })
               },
               action({
                 update: [transition(camera.position, [0, 100, 400], velocity(50, 150))],

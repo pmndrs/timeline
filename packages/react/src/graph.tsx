@@ -24,7 +24,7 @@ export function GrapthState({
   dependencies,
 }: {
   name: string
-  transitionsTo: GraphTimelineStateTransitions<RootState>
+  transitionsTo?: GraphTimelineStateTransitions<RootState>
   children?: ReactNode
   dependencies?: Array<unknown>
 }) {

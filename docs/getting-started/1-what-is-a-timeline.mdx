@@ -36,6 +36,21 @@ yield *
 yield * action({ until: timePassed(1, 'seconds') })
 ```
 
+> [!IMPORTANT]
+> Never use `await ...` inside timelines. Awaiting a promise pauses the generator in a way that cannot be canceled by the timeline runtime. Instead, wrap waits in an action and `yield*` it so cancellation can propagate correctly.
+>
+> Bad:
+>
+> ```ts
+> await someAsyncThing()
+> ```
+>
+> Good:
+>
+> ```ts
+> yield* action({ until: someAsyncThing() })
+> ```
+
 #### How long does an action run?
 
 An action runs until either:

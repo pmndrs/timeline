@@ -9,7 +9,7 @@ export const TimelineFallbacks = {
   },
   async *Skip() {},
   async *Idle() {
-    await new Promise(() => {})
+    yield* action({ until: forever() })
   },
 }
 
