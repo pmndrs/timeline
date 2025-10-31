@@ -19,12 +19,12 @@ export const Graph = forwardRef<
 
 export function GrapthState({
   name,
-  transitionsTo,
+  transitionTo,
   children,
   dependencies,
 }: {
   name: string
-  transitionsTo?: GraphTimelineStateTransitions<RootState>
+  transitionTo?: GraphTimelineStateTransitions<RootState>
   children?: ReactNode
   dependencies?: Array<unknown>
 }) {
@@ -40,10 +40,11 @@ export function GrapthState({
     for (const key in transitionsWithoutDeps) {
       delete transitionsWithoutDeps[key as keyof typeof transitionsWithoutDeps]
     }
-    Object.assign(transitionsWithoutDeps, transitionsTo)
+    Object.assign(transitionsWithoutDeps, transitionTo)
   }
   useEffect(() => {
-    graph.attach(name, () => replacable.run(), dependencies == null ? transitionsWithoutDeps : transitionsTo)
+    graph.attach(name, () => replacable.run(), dependencies == null ? transitionsWithoutDeps : transitionTo)
+    return () => graph.unattach(name)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graph, name, ...(dependencies ?? [])])
   return <AttachableProvider attachable={replacable}>{children}</AttachableProvider>

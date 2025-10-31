@@ -6,26 +6,26 @@ export class ReplacableTimeline<T = unknown> {
   private cancelControllers = new Set<AbortController>()
 
   private currentTimeline: ReusableTimeline<T>
-  private isAttached = true
+  private isAttached = false
 
   constructor(private readonly fallback: ReusableTimeline<T> = TimelineFallbacks.Idle) {
     this.currentTimeline = fallback
   }
 
   attach(timeline: ReusableTimeline<T>): void {
-    if (!this.isAttached) {
+    if (this.isAttached) {
       throw new Error(`cannot attach to a timeline that has a already another timeline attached`)
     }
-    this.isAttached = false
+    this.isAttached = true
     this.currentTimeline = timeline
     this.restart()
   }
 
   unattach(): void {
-    if (this.isAttached) {
+    if (!this.isAttached) {
       return
     }
-    this.isAttached = true
+    this.isAttached = false
     this.currentTimeline = this.fallback
     this.restart()
   }

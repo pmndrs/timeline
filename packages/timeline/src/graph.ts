@@ -58,7 +58,7 @@ export class GraphTimeline<T> extends Singleton<T> {
     entry.attach(async function* () {
       let transitions: Array<NonReuseableTimeline<T>> = []
       if (transitionTo != null) {
-        //the transitionsTo object is evaluated only at the start of a timeline, changing its content during the timeline has no effect
+        //the transitionTo object is evaluated only at the start of a timeline, changing its content during the timeline has no effect
         transitions = Object.entries<GraphTimelineStateTransition<T> | string | (() => string)>(transitionTo)
           .filter((entry): entry is [string, GraphTimelineStateTransition<T>] => typeof entry[1] === 'object')
           .map(async function* ([name, condition]): NonReuseableTimeline<T> {

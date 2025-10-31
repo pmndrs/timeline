@@ -20,7 +20,7 @@ export function useAttachTimeline(timeline: ReusableTimeline<RootState>, deps: A
   }
   useEffect(() => {
     attachable.attach(timeline)
-    return () => attachable?.unattach(timeline)
+    return () => attachable.unattach(timeline)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attachable, ...deps])
 }
