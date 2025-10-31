@@ -10,9 +10,6 @@ export type SwitchTimelineCase<T> = {
 export type SwitchTimelineCaseCondition<T> = (...params: Parameters<ActionUpdate<T>>) => boolean
 
 export class SwitchTimeline<T> {
-  private caseIndex = 0
-  private restartController = new AbortController()
-
   constructor(private readonly cases: Array<SwitchTimelineCase<T> | undefined> = []) {}
 
   attach(index: number, condition: SwitchTimelineCaseCondition<T>, timeline: ReusableTimeline<T>) {
@@ -28,6 +25,8 @@ export class SwitchTimeline<T> {
   }
 
   async *run(): NonReuseableTimeline<T> {
+    let restartController = new AbortController()
+    let caseIndex = 0
     const _this = this
     yield* parallel(
       'race',
@@ -44,18 +43,17 @@ export class SwitchTimeline<T> {
               break
             }
           }
-          if (this.caseIndex == newCaseIndex) {
+          if (caseIndex == newCaseIndex) {
             return
           }
-          this.caseIndex = newCaseIndex
-          _this.restartController.abort()
+          caseIndex = newCaseIndex
+          restartController.abort()
         },
       }),
       async function* () {
-        let restartController: AbortController
         do {
-          _this.restartController = restartController = new AbortController()
-          yield* abortable(_this.cases[_this.caseIndex]!.timeline())
+          restartController = new AbortController()
+          yield* abortable(_this.cases[caseIndex]!.timeline(), restartController.signal)
           //if we arrive at the while condition without beeing aborted, that means the current timeline successfully finished
         } while (restartController.signal.aborted)
       },
