@@ -1,4 +1,12 @@
-import { abortable, action, ActionUpdate, parallel, type NonReuseableTimeline, type ReusableTimeline } from './index.js'
+import {
+  abortable,
+  action,
+  ActionUpdate,
+  parallel,
+  TimelineFallbacks,
+  type NonReuseableTimeline,
+  type ReusableTimeline,
+} from './index.js'
 
 export type SwitchTimelineCase<T> = {
   /**
@@ -13,6 +21,9 @@ export class SwitchTimeline<T> {
   constructor(private readonly cases: Array<SwitchTimelineCase<T> | undefined> = []) {}
 
   attach(index: number, condition: SwitchTimelineCaseCondition<T>, timeline: ReusableTimeline<T>) {
+    if (index < 0) {
+      throw new Error(`the switch case index must be a positive number including 0`)
+    }
     if (this.cases[index] != null) {
       throw new Error(`cannot attach to case "${index}" that has a already another timeline attached`)
     }
@@ -26,13 +37,13 @@ export class SwitchTimeline<T> {
 
   async *run(): NonReuseableTimeline<T> {
     let restartController = new AbortController()
-    let caseIndex = 0
+    let caseIndex = -1
     const _this = this
     yield* parallel(
       'race',
       action({
         update: (...params) => {
-          let newCaseIndex = 0
+          let newCaseIndex = -1
           for (let i = 0; i < this.cases.length; i++) {
             const case_ = this.cases[i]
             if (case_ == null) {
@@ -53,7 +64,7 @@ export class SwitchTimeline<T> {
       async function* () {
         do {
           restartController = new AbortController()
-          yield* abortable(_this.cases[caseIndex]!.timeline(), restartController.signal)
+          yield* abortable((_this.cases[caseIndex]?.timeline ?? TimelineFallbacks.Idle)(), restartController.signal)
           //if we arrive at the while condition without beeing aborted, that means the current timeline successfully finished
         } while (restartController.signal.aborted)
       },
