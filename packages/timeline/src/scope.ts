@@ -1,5 +1,5 @@
 import { SynchronousAbortController, SynchronousAbortSignal } from './abort.js'
-import type { GetTimelineContext, GetTimelineState, NonReuseableTimeline } from './index.js'
+import type { NonReuseableTimeline } from './index.js'
 
 /**
  * allows to bind a resource to the lifetime of the scope regardless if the scope has finished or if it was cancelled
@@ -11,9 +11,9 @@ import type { GetTimelineContext, GetTimelineState, NonReuseableTimeline } from 
  *    yield* action(...)
  * })
  */
-export async function* scope<T extends NonReuseableTimeline<any, any>>(
-  timeline: (abortSignal: AbortSignal) => T,
-): NonReuseableTimeline<GetTimelineState<T>, GetTimelineContext<T>> {
+export async function* scope<T>(
+  timeline: (abortSignal: AbortSignal) => NonReuseableTimeline<T>,
+): NonReuseableTimeline<T> {
   const internalAbortController = new SynchronousAbortController()
   let externalAbortSignal!: AbortSignal
   yield {
@@ -21,7 +21,6 @@ export async function* scope<T extends NonReuseableTimeline<any, any>>(
     callback: (abortSignal) => (externalAbortSignal = abortSignal),
   }
   if (externalAbortSignal.aborted) {
-    console.log('skipping the scope because aborted')
     return
   }
   yield* timeline(SynchronousAbortSignal.any([internalAbortController.signal, externalAbortSignal]))

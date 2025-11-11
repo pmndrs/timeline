@@ -1,12 +1,12 @@
 import { action, NonReuseableTimeline, ReusableTimeline, timePassed } from './index.js'
 import { Singleton } from './singleton.js'
 
-export class SequentialTimeline<T = unknown, C extends {} = {}> extends Singleton<T, C> {
-  constructor(private readonly timelines: Array<ReusableTimeline<T, C> | undefined> = []) {
+export class SequentialTimeline<T = unknown> extends Singleton<T> {
+  constructor(private readonly timelines: Array<ReusableTimeline<T> | undefined> = []) {
     super()
   }
 
-  attach(index: number, timeline: ReusableTimeline<T, C>): void {
+  attach(index: number, timeline: ReusableTimeline<T>): void {
     if (this.timelines[index] != null) {
       throw new Error(`there's already an timeline set at index '${index}'`)
     }
@@ -17,7 +17,7 @@ export class SequentialTimeline<T = unknown, C extends {} = {}> extends Singleto
     this.timelines[index] = undefined
   }
 
-  protected async *unsafeRun(): NonReuseableTimeline<T, C> {
+  protected async *unsafeRun(): NonReuseableTimeline<T> {
     let ranAnyTimeline = false
     for (const timeline of this.timelines) {
       if (timeline == null) {

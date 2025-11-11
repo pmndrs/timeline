@@ -3,26 +3,23 @@ import {
   abortable,
   action,
   type ActionUpdate,
-  type GetTimelineContext,
-  type GetTimelineState,
   parallel,
-  type Timeline,
   TimelineFallbacks,
   type NonReuseableTimeline,
   type ReusableTimeline,
 } from './index.js'
 
-export type SwitchTimelineCase<T extends ReusableTimeline<any, any>> = {
+export type SwitchTimelineCase<T> = {
   /**
    * leaving the condition empty means this is the default case
    */
-  condition?: SwitchTimelineCaseCondition<GetTimelineState<T>>
-  timeline: T
+  condition?: SwitchTimelineCaseCondition<T>
+  timeline: ReusableTimeline<T>
 }
 export type SwitchTimelineCaseCondition<T> = (...params: Parameters<ActionUpdate<T>>) => boolean
 
-export class SwitchTimeline<T = unknown, C extends {} = {}> {
-  constructor(private readonly cases: Array<SwitchTimelineCase<ReusableTimeline<T, C>> | undefined> = []) {}
+export class SwitchTimeline<T = unknown> {
+  constructor(private readonly cases: Array<SwitchTimelineCase<T> | undefined> = []) {}
 
   attach(index: number, condition: SwitchTimelineCaseCondition<T>, timeline: ReusableTimeline<T>) {
     if (index < 0) {
@@ -39,11 +36,11 @@ export class SwitchTimeline<T = unknown, C extends {} = {}> {
     delete this.cases[index]
   }
 
-  async *run(): NonReuseableTimeline<T, C> {
+  async *run(): NonReuseableTimeline<T> {
     let restartController = new SynchronousAbortController()
     let caseIndex = -1
     const _this = this
-    yield* parallel<Timeline<T, C>>(
+    yield* parallel(
       'race',
       action({
         update: (...params) => {
@@ -76,7 +73,7 @@ export class SwitchTimeline<T = unknown, C extends {} = {}> {
   }
 }
 
-export async function* switch_<T extends ReusableTimeline<any, any>>(cases: Array<SwitchTimelineCase<T>>) {
-  const _switch = new SwitchTimeline<GetTimelineState<T>, GetTimelineContext<T>>(cases)
+export async function* switch_<T>(cases: Array<SwitchTimelineCase<T>>) {
+  const _switch = new SwitchTimeline<T>(cases)
   yield* _switch.run()
 }

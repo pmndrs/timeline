@@ -1,11 +1,5 @@
 import { action, ActionUpdate } from './action.js'
-import {
-  GetTimelineContext,
-  GetTimelineState,
-  Timeline,
-  type NonReuseableTimeline,
-  type ReusableTimeline,
-} from './index.js'
+import { type NonReuseableTimeline, type ReusableTimeline } from './index.js'
 import { forever, TimelineFallbacks } from './misc.js'
 import { parallel } from './parallel.js'
 import { ReplacableTimeline } from './replaceable.js'
@@ -24,24 +18,24 @@ export type GraphTimelineStateTransitions<T = unknown> =
   | Record<string, GraphTimelineStateTransition<T>>
   | { finally?: string | (() => string) }
 
-export type GraphTimelineState<T extends ReusableTimeline<any, any, string | undefined | void>> = {
-  timeline: T
-  transitionTo?: GraphTimelineStateTransitions<GetTimelineState<T>>
+export type GraphTimelineState<T> = {
+  timeline: ReusableTimeline<T, string | undefined | void>
+  transitionTo?: GraphTimelineStateTransitions<T>
 }
 
-export type GraphTimelineStateMap<T extends ReusableTimeline<any, any, string | undefined | void>> = {
+export type GraphTimelineStateMap<T> = {
   [key: string]: GraphTimelineState<T>
 }
 
-export class GraphTimeline<T = unknown, C extends {} = {}> extends Singleton<T, C> {
+export class GraphTimeline<T = unknown> extends Singleton<T> {
   private currentState: string
-  private stateMap = new Map<string, ReplacableTimeline<T, C>>()
+  private stateMap = new Map<string, ReplacableTimeline<T>>()
 
   constructor(
     public enterState: string,
-    states: GraphTimelineStateMap<ReusableTimeline<T, C, string | undefined | void>> = {},
+    states: GraphTimelineStateMap<T> = {},
     public exitState?: string,
-    private readonly fallback: ReusableTimeline<T, C> = TimelineFallbacks.Idle,
+    private readonly fallback: ReusableTimeline<T> = TimelineFallbacks.Idle,
     private readonly resetOnRun: boolean = true,
   ) {
     super()
@@ -53,8 +47,8 @@ export class GraphTimeline<T = unknown, C extends {} = {}> extends Singleton<T, 
 
   attach(
     name: string,
-    timeline: GraphTimelineState<ReusableTimeline<T, C, string | undefined | void>>['timeline'],
-    transitionTo?: GraphTimelineState<ReusableTimeline<T, C, string | undefined | void>>['transitionTo'],
+    timeline: GraphTimelineState<T>['timeline'],
+    transitionTo?: GraphTimelineState<T>['transitionTo'],
   ) {
     let entry = this.stateMap.get(name)
     if (entry == null) {
@@ -62,12 +56,12 @@ export class GraphTimeline<T = unknown, C extends {} = {}> extends Singleton<T, 
     }
     const _this = this
     entry.attach(async function* () {
-      let transitions: Array<NonReuseableTimeline<T, C>> = []
+      let transitions: Array<NonReuseableTimeline<T>> = []
       if (transitionTo != null) {
         //the transitionTo object is evaluated only at the start of a timeline, changing its content during the timeline has no effect
         transitions = Object.entries<GraphTimelineStateTransition<T> | string | (() => string)>(transitionTo)
           .filter((entry): entry is [string, GraphTimelineStateTransition<T>] => typeof entry[1] === 'object')
-          .map(async function* ([name, condition]): NonReuseableTimeline<T, C> {
+          .map(async function* ([name, condition]): NonReuseableTimeline<T> {
             const whenUpdate = condition.whenUpdate ?? condition.when
             const whenPromise = condition.whenPromise
             if (whenUpdate != null) {
@@ -80,7 +74,7 @@ export class GraphTimeline<T = unknown, C extends {} = {}> extends Singleton<T, 
             _this.currentState = name
           })
       }
-      yield* parallel<Timeline<T, C>>('race', ...transitions, async function* () {
+      yield* parallel('race', ...transitions, async function* () {
         const newState = yield* timeline()
         const finalStateName = transitionTo?.finally
         if (finalStateName != null && typeof finalStateName != 'object') {
@@ -129,11 +123,7 @@ export class GraphTimeline<T = unknown, C extends {} = {}> extends Singleton<T, 
  * @param enterStateName is the name of the initial state
  * @param stateMap is the map of states including their transitions to other states
  */
-export async function* graph<T extends ReusableTimeline<any, any, string | undefined | void>>(
-  enterStateName: string,
-  stateMap: GraphTimelineStateMap<T>,
-  exitStateName?: string,
-) {
-  const graph = new GraphTimeline<GetTimelineState<T>, GetTimelineContext<T>>(enterStateName, stateMap, exitStateName)
+export async function* graph<T>(enterStateName: string, stateMap: GraphTimelineStateMap<T>, exitStateName?: string) {
+  const graph = new GraphTimeline<T>(enterStateName, stateMap, exitStateName)
   yield* graph.run()
 }

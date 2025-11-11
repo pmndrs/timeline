@@ -1,7 +1,7 @@
 import { NonReuseableTimeline, ReusableTimeline, Singleton } from './index.js'
 
-export class QueueTimeline<T = unknown, C extends {} = {}> extends Singleton<T, C> {
-  private readonly entries: Array<ReusableTimeline<T, C>> = []
+export class QueueTimeline<T = unknown> extends Singleton<T> {
+  private readonly entries: Array<ReusableTimeline<T>> = []
   private readonly notEmptyListeners: Array<() => void> = []
 
   get length(): number {
@@ -12,7 +12,7 @@ export class QueueTimeline<T = unknown, C extends {} = {}> extends Singleton<T, 
     super()
   }
 
-  attach(timeline: ReusableTimeline<T, C>, index = Infinity): void {
+  attach(timeline: ReusableTimeline<T>, index = Infinity): void {
     const wasEmpty = this.entries.length === 0
     index = Math.max(0, Math.min(this.entries.length, Math.floor(index)))
     this.entries.splice(index, 0, timeline)
@@ -36,8 +36,8 @@ export class QueueTimeline<T = unknown, C extends {} = {}> extends Singleton<T, 
     return new Promise((resolve) => this.notEmptyListeners.push(resolve))
   }
 
-  protected async *unsafeRun(): NonReuseableTimeline<T, C> {
-    let entry: ReusableTimeline<T, C> | undefined
+  protected async *unsafeRun(): NonReuseableTimeline<T> {
+    let entry: ReusableTimeline<T> | undefined
     while ((entry = this.entries.shift()) != null) {
       yield* entry()
     }

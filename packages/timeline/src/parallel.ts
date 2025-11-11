@@ -1,20 +1,17 @@
 import { SynchronousAbortController, SynchronousAbortSignal } from './abort.js'
 import { action } from './action.js'
 import {
-  type Timeline,
   type NonReuseableTimeline,
   runTimelineAsync,
   type TimelineYieldActionUpdate,
   type ReusableTimeline,
   abortSignalToPromise,
-  type GetTimelineState,
-  type GetTimelineContext,
+  Timeline,
 } from './index.js'
 import { Singleton } from './singleton.js'
 
-export class ParallelTimeline<T = unknown, C extends {} = {}> extends Singleton<T, C> {
+export class ParallelTimeline<T = unknown> extends Singleton<T> {
   private runningState?: {
-    context: C
     internalAbortController: AbortController
     timelines: Map<
       ReusableTimeline<T>,
@@ -62,7 +59,6 @@ export class ParallelTimeline<T = unknown, C extends {} = {}> extends Singleton<
     runningState.timelines.set(timeline, timelineRunningState)
     await runTimelineAsync(
       timeline(),
-      runningState.context,
       timelineRunningState.ref,
       SynchronousAbortSignal.any([
         runningState.internalAbortController.signal,
@@ -76,16 +72,10 @@ export class ParallelTimeline<T = unknown, C extends {} = {}> extends Singleton<
     runningState.internalAbortController.abort()
   }
 
-  protected async *unsafeRun(): NonReuseableTimeline<T, C> {
-    let context!: C
-    yield {
-      type: 'get-context',
-      callback: (c) => (context = c),
-    }
+  protected async *unsafeRun(): NonReuseableTimeline<T> {
     const runningState: typeof this.runningState = (this.runningState = {
       internalAbortController: new SynchronousAbortController(),
       timelines: new Map(),
-      context,
     })
     for (const timeline of this.timelines) {
       this.startTimeline(timeline)
@@ -109,8 +99,8 @@ export class ParallelTimeline<T = unknown, C extends {} = {}> extends Singleton<
  * function for executing multiple timelines in parallel
  * @param type when to stop all timelines - either wait for `"all"` or cancel all timelines once the first timeline is done via `"race"`
  */
-export async function* parallel<T extends Timeline<any, any>>(type: 'all' | 'race', ...timelines: Array<T | boolean>) {
-  const parallel = new ParallelTimeline<GetTimelineState<T>, GetTimelineContext<T>>(
+export async function* parallel<T>(type: 'all' | 'race', ...timelines: Array<Timeline<T> | boolean>) {
+  const parallel = new ParallelTimeline<T>(
     type,
     new Set(
       timelines

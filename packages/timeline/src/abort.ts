@@ -41,7 +41,6 @@ export class SynchronousAbortSignal extends EventTarget implements AbortSignal {
 
     // Otherwise, listen for aborts
     const onAbort = (event: Event) => {
-      console.log('on abort in any')
       const target = event.currentTarget as AbortSignal
       controller.abort(target.reason)
       cleanup()

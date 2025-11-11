@@ -1,6 +1,6 @@
 import { Euler, Matrix4, Object3D, Quaternion, Vector3, type AnimationAction } from 'three'
 import { action } from './action.js'
-import { type ReusableTimeline, type ActionUpdate, Timeline, GetTimelineState, GetTimelineContext } from './index.js'
+import { type ReusableTimeline, type ActionUpdate } from './index.js'
 import { parallel } from './parallel.js'
 
 export const TimelineFallbacks = {
@@ -65,26 +65,22 @@ export async function promiseConcat(promises: Array<Promise<unknown>>): Promise<
 /**
  * function for generating a timeline that executes the inner timelines until a promise is met
  */
-export async function* doUntil<T extends ReusableTimeline<any, any>>(promise: Promise<unknown>, timeline: T) {
-  yield* parallel<Timeline<GetTimelineState<T>, GetTimelineContext<T>>>(
-    'race',
-    action({ until: promise }),
-    async function* () {
-      while (true) {
-        yield* timeline()
-      }
-    },
-  )
+export async function* doUntil<T>(promise: Promise<unknown>, timeline: ReusableTimeline<T>) {
+  yield* parallel('race', action({ until: promise }), async function* () {
+    while (true) {
+      yield* timeline()
+    }
+  })
 }
 
 /**
  * function for generating a timeline that executes the inner function while a update function returns true
  */
-export async function* doWhile<T extends ReusableTimeline<any, any>>(
-  update: (...params: Parameters<ActionUpdate<GetTimelineState<T>>>) => boolean,
-  timeline: T,
+export async function* doWhile<T>(
+  update: (...params: Parameters<ActionUpdate<T>>) => boolean,
+  timeline: ReusableTimeline<T>,
 ) {
-  yield* parallel<Timeline<GetTimelineState<T>, GetTimelineContext<T>>>('race', action({ update }), async function* () {
+  yield* parallel('race', action({ update }), async function* () {
     while (true) {
       yield* timeline()
     }
