@@ -75,4 +75,3 @@ This project is supported by a few companies and individuals building cutting ed
 ## Roadmap
 
 [ ] record, useRecordedTimeline, ... => allows to bind the timeline progress to any controls (e.g. scrolling); allowing using markers to attach scroll positions (e.g. button center screen) to the time of the timeline  
-[ ] timeline visualization and `yield* marker(...)` to appear in the visualization (e.g. log values or complete json objects)

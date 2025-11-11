@@ -114,7 +114,7 @@ async function* mainTimeline() {
   }
 }
 
-const update = runTimeline(mainTimeline())
+const update = runTimeline(mainTimeline(), {})
 
 // animate
 let lastTimeMs = performance.now()

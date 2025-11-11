@@ -1,18 +1,19 @@
+import { SynchronousAbortController, SynchronousAbortSignal } from './abort.js'
 import { abortable } from './abortable.js'
 import { TimelineFallbacks, type NonReuseableTimeline, type ReusableTimeline } from './index.js'
 
-export class ReplacableTimeline<T = unknown> {
+export class ReplacableTimeline<T = unknown, C extends {} = {}> {
   private restartControllers = new Set<AbortController>()
   private cancelControllers = new Set<AbortController>()
 
-  private currentTimeline: ReusableTimeline<T>
+  private currentTimeline: ReusableTimeline<T, C>
   private isAttached = false
 
-  constructor(private readonly fallback: ReusableTimeline<T> = TimelineFallbacks.Idle) {
+  constructor(private readonly fallback: ReusableTimeline<T, C> = TimelineFallbacks.Idle) {
     this.currentTimeline = fallback
   }
 
-  attach(timeline: ReusableTimeline<T>): void {
+  attach(timeline: ReusableTimeline<T, C>): void {
     if (this.isAttached) {
       throw new Error(`cannot attach to a timeline that has a already another timeline attached`)
     }
@@ -46,14 +47,17 @@ export class ReplacableTimeline<T = unknown> {
     this.restartControllers.clear()
   }
 
-  async *run(): NonReuseableTimeline<T> {
+  async *run(): NonReuseableTimeline<T, C> {
     let restartController: AbortController
     do {
-      restartController = new AbortController()
+      restartController = new SynchronousAbortController()
       this.restartControllers.add(restartController)
-      const cancelController = new AbortController()
+      const cancelController = new SynchronousAbortController()
       this.cancelControllers.add(cancelController)
-      yield* abortable(this.currentTimeline, AbortSignal.any([restartController.signal, cancelController.signal]))
+      yield* abortable(
+        this.currentTimeline,
+        SynchronousAbortSignal.any([restartController.signal, cancelController.signal]),
+      )
       this.restartControllers.delete(restartController)
       //if we arrive at the while condition without beeing aborted, that means the current timeline successfully finished, or the canceController was called
     } while (restartController.signal.aborted)

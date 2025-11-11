@@ -36,7 +36,7 @@ describe('action cleanup', () => {
 
   it('registers cleanup against global abort if provided via get-global-abort-signal', async () => {
     let cleaned = 0
-    const ctrl = new AbortController()
+    const ctrl = SynchronousAbortController()
     const timeline = action({
       init: () => () => {
         cleaned++

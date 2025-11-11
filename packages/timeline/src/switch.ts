@@ -1,24 +1,28 @@
+import { SynchronousAbortController } from './abort.js'
 import {
   abortable,
   action,
-  ActionUpdate,
+  type ActionUpdate,
+  type GetTimelineContext,
+  type GetTimelineState,
   parallel,
+  type Timeline,
   TimelineFallbacks,
   type NonReuseableTimeline,
   type ReusableTimeline,
 } from './index.js'
 
-export type SwitchTimelineCase<T> = {
+export type SwitchTimelineCase<T extends ReusableTimeline<any, any>> = {
   /**
    * leaving the condition empty means this is the default case
    */
-  condition?: SwitchTimelineCaseCondition<T>
-  timeline: ReusableTimeline<T>
+  condition?: SwitchTimelineCaseCondition<GetTimelineState<T>>
+  timeline: T
 }
 export type SwitchTimelineCaseCondition<T> = (...params: Parameters<ActionUpdate<T>>) => boolean
 
-export class SwitchTimeline<T> {
-  constructor(private readonly cases: Array<SwitchTimelineCase<T> | undefined> = []) {}
+export class SwitchTimeline<T = unknown, C extends {} = {}> {
+  constructor(private readonly cases: Array<SwitchTimelineCase<ReusableTimeline<T, C>> | undefined> = []) {}
 
   attach(index: number, condition: SwitchTimelineCaseCondition<T>, timeline: ReusableTimeline<T>) {
     if (index < 0) {
@@ -35,11 +39,11 @@ export class SwitchTimeline<T> {
     delete this.cases[index]
   }
 
-  async *run(): NonReuseableTimeline<T> {
-    let restartController = new AbortController()
+  async *run(): NonReuseableTimeline<T, C> {
+    let restartController = new SynchronousAbortController()
     let caseIndex = -1
     const _this = this
-    yield* parallel(
+    yield* parallel<Timeline<T, C>>(
       'race',
       action({
         update: (...params) => {
@@ -63,7 +67,7 @@ export class SwitchTimeline<T> {
       }),
       async function* () {
         do {
-          restartController = new AbortController()
+          restartController = new SynchronousAbortController()
           yield* abortable((_this.cases[caseIndex]?.timeline ?? TimelineFallbacks.Idle)(), restartController.signal)
           //if we arrive at the while condition without beeing aborted, that means the current timeline successfully finished
         } while (restartController.signal.aborted)
@@ -72,7 +76,7 @@ export class SwitchTimeline<T> {
   }
 }
 
-export async function* switch_<T>(cases: Array<SwitchTimelineCase<T>>) {
-  const _switch = new SwitchTimeline(cases)
+export async function* switch_<T extends ReusableTimeline<any, any>>(cases: Array<SwitchTimelineCase<T>>) {
+  const _switch = new SwitchTimeline<GetTimelineState<T>, GetTimelineContext<T>>(cases)
   yield* _switch.run()
 }

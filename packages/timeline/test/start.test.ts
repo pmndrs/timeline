@@ -13,7 +13,7 @@ describe('start cleanup with external abort', () => {
         // run forever until external abort
       },
     })
-    const abortCtrl = new AbortController()
+    const abortCtrl = SynchronousAbortController()
     const update = runTimeline(timeline, abortCtrl.signal)
     await waitForSetup()
     step(update, 3)

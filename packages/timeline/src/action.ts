@@ -1,4 +1,5 @@
-import type { NonReuseableTimeline, TimelineClock, TimelineYieldAction } from './index.js'
+import { SynchronousAbortController } from './abort.js'
+import { scope, type NonReuseableTimeline, type TimelineClock, type TimelineYieldAction } from './index.js'
 
 /**
  * @returns true if the action update should continue (default)
@@ -21,65 +22,55 @@ export type ActionParams<T> = {
  * core function for yielding an action used via `yield* action({...})`
  * allows to run this action `until` a certain event and execute an `update` function until the action is finished
  */
-export async function* action<T>(action: ActionParams<T>): NonReuseableTimeline<T> {
-  const cleanup = action.init?.()
-  const internalAbortController = new AbortController()
-  if (cleanup != null) {
-    internalAbortController.signal.addEventListener('abort', cleanup, { once: true })
-    yield {
-      type: 'get-global-abort-signal',
-      callback: (globalAbortSignal) => {
-        if (globalAbortSignal.aborted) {
-          cleanup()
-          return
-        }
-        globalAbortSignal.addEventListener('abort', cleanup, { once: true, signal: internalAbortController.signal })
-      },
+export function action<T>(action: ActionParams<T>): NonReuseableTimeline<T> {
+  return scope(async function* (abortSignal) {
+    const cleanup = action.init?.()
+    if (cleanup != null) {
+      abortSignal.addEventListener('abort', cleanup, { once: true })
     }
-  }
-  if (action.until != null) {
-    action.until.then(() => internalAbortController.abort()).catch(console.error)
-  }
-  const timelineYield: TimelineYieldAction<T> = { type: 'action', abortSignal: internalAbortController.signal }
-  if (action.update != null && Array.isArray(action.update)) {
-    const updates = action.update
-    let actionTime = 0
-    const memos = updates.map(() => ({}))
-    timelineYield.update = (state, clock) => {
-      actionTime += clock.delta
-      let shouldContinue: boolean | undefined
-      for (let i = 0; i < updates.length; i++) {
-        const currentShouldContinue = updates[i](state, clock, actionTime, memos[i])
-        if (currentShouldContinue == null) {
-          continue
-        }
-        if (shouldContinue == null || shouldContinue == null) {
-          shouldContinue = currentShouldContinue
-        }
-      }
-      shouldContinue ??= true
-      if (!shouldContinue) {
-        internalAbortController.abort()
-      }
-    }
-  }
 
-  if (action.update != null && !Array.isArray(action.update)) {
-    const update = action.update
-    let actionTime = 0
-    let firstUpdate = true
-    const memo = {}
-    timelineYield.update = (state, clock) => {
-      actionTime += clock.delta
-      if (update(state, clock, actionTime, memo) === false) {
-        internalAbortController.abort()
-      }
-      firstUpdate = false
+    const internalAbortController = new SynchronousAbortController()
+    if (action.until != null) {
+      action.until.then(() => internalAbortController.abort()).catch(console.error)
     }
-  }
+    const timelineYield: TimelineYieldAction<T> = { type: 'action', abortSignal: internalAbortController.signal }
+    if (action.update != null && Array.isArray(action.update)) {
+      const updates = action.update
+      let actionTime = 0
+      const memos = updates.map(() => ({}))
+      timelineYield.update = (state, clock) => {
+        actionTime += clock.delta
+        let shouldContinue: boolean | undefined
+        for (let i = 0; i < updates.length; i++) {
+          const currentShouldContinue = updates[i](state, clock, actionTime, memos[i])
+          if (currentShouldContinue == null) {
+            continue
+          }
+          if (shouldContinue == null || shouldContinue == null) {
+            shouldContinue = currentShouldContinue
+          }
+        }
+        shouldContinue ??= true
+        if (!shouldContinue) {
+          internalAbortController.abort()
+        }
+      }
+    }
 
-  yield timelineYield
-  if (!internalAbortController.signal.aborted) {
-    internalAbortController.abort()
-  }
+    if (action.update != null && !Array.isArray(action.update)) {
+      const update = action.update
+      let actionTime = 0
+      let firstUpdate = true
+      const memo = {}
+      timelineYield.update = (state, clock) => {
+        actionTime += clock.delta
+        if (update(state, clock, actionTime, memo) === false) {
+          internalAbortController.abort()
+        }
+        firstUpdate = false
+      }
+    }
+
+    yield timelineYield
+  })
 }

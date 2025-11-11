@@ -1,16 +1,20 @@
+import { SynchronousAbortController, SynchronousAbortSignal } from './abort.js'
 import { action } from './action.js'
 import {
   type Timeline,
   type NonReuseableTimeline,
   runTimelineAsync,
-  TimelineYieldActionUpdate,
-  ReusableTimeline,
+  type TimelineYieldActionUpdate,
+  type ReusableTimeline,
   abortSignalToPromise,
+  type GetTimelineState,
+  type GetTimelineContext,
 } from './index.js'
 import { Singleton } from './singleton.js'
 
-export class ParallelTimeline<T> extends Singleton<T> {
+export class ParallelTimeline<T = unknown, C extends {} = {}> extends Singleton<T, C> {
   private runningState?: {
+    context: C
     internalAbortController: AbortController
     timelines: Map<
       ReusableTimeline<T>,
@@ -52,14 +56,18 @@ export class ParallelTimeline<T> extends Singleton<T> {
     const timelineRunningState: (typeof runningState)['timelines'] extends Map<any, infer K> ? K : never = {
       ref: {},
       finished: false,
-      abortController: new AbortController(),
+      abortController: new SynchronousAbortController(),
     }
 
     runningState.timelines.set(timeline, timelineRunningState)
     await runTimelineAsync(
       timeline(),
+      runningState.context,
       timelineRunningState.ref,
-      AbortSignal.any([runningState.internalAbortController.signal, timelineRunningState.abortController.signal]),
+      SynchronousAbortSignal.any([
+        runningState.internalAbortController.signal,
+        timelineRunningState.abortController.signal,
+      ]),
     )
     timelineRunningState.finished = true
     if (this.type === 'all' && !runningState.timelines.values().every((value) => value.finished)) {
@@ -68,10 +76,16 @@ export class ParallelTimeline<T> extends Singleton<T> {
     runningState.internalAbortController.abort()
   }
 
-  protected async *unsafeRun(): NonReuseableTimeline<T> {
+  protected async *unsafeRun(): NonReuseableTimeline<T, C> {
+    let context!: C
+    yield {
+      type: 'get-context',
+      callback: (c) => (context = c),
+    }
     const runningState: typeof this.runningState = (this.runningState = {
-      internalAbortController: new AbortController(),
+      internalAbortController: new SynchronousAbortController(),
       timelines: new Map(),
+      context,
     })
     for (const timeline of this.timelines) {
       this.startTimeline(timeline)
@@ -95,17 +109,14 @@ export class ParallelTimeline<T> extends Singleton<T> {
  * function for executing multiple timelines in parallel
  * @param type when to stop all timelines - either wait for `"all"` or cancel all timelines once the first timeline is done via `"race"`
  */
-export async function* parallel<T>(
-  type: 'all' | 'race',
-  ...timelines: Array<Timeline<T> | boolean>
-): NonReuseableTimeline<T> {
-  const parallel = new ParallelTimeline(
+export async function* parallel<T extends Timeline<any, any>>(type: 'all' | 'race', ...timelines: Array<T | boolean>) {
+  const parallel = new ParallelTimeline<GetTimelineState<T>, GetTimelineContext<T>>(
     type,
     new Set(
       timelines
         .filter((timeline) => typeof timeline != 'boolean')
         .map((timeline) => (typeof timeline === 'function' ? timeline : () => timeline)),
-    ),
+    ) as Set<ReusableTimeline>,
   )
   yield* parallel.run()
 }

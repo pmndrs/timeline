@@ -1,15 +1,26 @@
-import { ReplacableTimeline, ReusableTimeline, runTimeline } from '@pmndrs/timeline'
+import {
+  GetTimelineContext,
+  ReplacableTimeline,
+  ReusableTimeline,
+  runTimeline,
+  SynchronousAbortController,
+} from '@pmndrs/timeline'
 import { RootState, useFrame } from '@react-three/fiber'
 import { ReactNode, useEffect, useMemo, useRef } from 'react'
 import { AttachableProvider } from './attachable.js'
 
-export function useRunTimeline(timeline: ReusableTimeline<RootState>, deps: Array<any>) {
+export function useRunTimeline<T extends ReusableTimeline<RootState, any>>(
+  timeline: T,
+  context: GetTimelineContext<T> = {} as any,
+  deps: Array<any>,
+) {
   const updateRef = useRef<(state: RootState, delta: number) => void>(null)
   useEffect(() => {
-    const abortController = new AbortController()
-    const update = runTimeline(timeline(), abortController.signal)
+    const abortController = new SynchronousAbortController()
+    const update = runTimeline(timeline(), context as GetTimelineContext<T>, abortController.signal)
     updateRef.current = update
     return () => {
+      console.log('cleanup')
       abortController.abort()
       updateRef.current = null
     }
@@ -18,8 +29,16 @@ export function useRunTimeline(timeline: ReusableTimeline<RootState>, deps: Arra
   useFrame((state, delta) => updateRef.current?.(state, delta))
 }
 
-export function RunTimeline({ children }: { children?: ReactNode }) {
+export function RunTimeline({
+  children,
+  context = {},
+  deps = [],
+}: {
+  children?: ReactNode
+  context?: {}
+  deps?: Array<any>
+}) {
   const replaceable = useMemo(() => new ReplacableTimeline(), [])
-  useRunTimeline(() => replaceable.run(), [])
+  useRunTimeline(() => replaceable.run(), context, deps)
   return <AttachableProvider attachable={replaceable}>{children}</AttachableProvider>
 }
