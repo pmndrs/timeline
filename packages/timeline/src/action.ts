@@ -28,12 +28,16 @@ export function action<T>(action: ActionParams<T>): NonReuseableTimeline<T> {
     let initReady = action.init == null
     const initResult = action.init?.()
     if (initResult instanceof Promise) {
-      initResult.then((cleanup) => {
-        initReady = true
-        if (typeof cleanup === 'function') {
-          abortSignal.addEventListener('abort', cleanup, { once: true })
-        }
-      })
+      initResult
+        .then((cleanup) => {
+          if (typeof cleanup === 'function') {
+            abortSignal.addEventListener('abort', cleanup, { once: true })
+          }
+        })
+        .catch(console.error)
+        .finally(() => {
+          initReady = true
+        })
     } else {
       initReady = true
       if (typeof initResult === 'function') {
