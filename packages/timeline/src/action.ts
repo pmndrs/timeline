@@ -13,7 +13,7 @@ export type ActionUpdate<T> = (
 ) => boolean | void | undefined
 
 export type ActionParams<T> = {
-  readonly init?: () => (() => void) | undefined | void
+  readonly init?: () => (() => void) | Promise<(() => void) | void> | undefined | void
   readonly update?: ActionUpdate<T> | Array<ActionUpdate<T>>
   readonly until?: Promise<unknown>
 }
@@ -24,9 +24,21 @@ export type ActionParams<T> = {
  */
 export function action<T>(action: ActionParams<T>): NonReuseableTimeline<T> {
   return scope(async function* (abortSignal) {
-    const cleanup = action.init?.()
-    if (cleanup != null) {
-      abortSignal.addEventListener('abort', cleanup, { once: true })
+    // Gate updates until async init resolves
+    let initReady = action.init == null
+    const initResult = action.init?.()
+    if (initResult instanceof Promise) {
+      initResult.then((cleanup) => {
+        initReady = true
+        if (typeof cleanup === 'function') {
+          abortSignal.addEventListener('abort', cleanup, { once: true })
+        }
+      })
+    } else {
+      initReady = true
+      if (typeof initResult === 'function') {
+        abortSignal.addEventListener('abort', initResult, { once: true })
+      }
     }
 
     const internalAbortController = new SynchronousAbortController()
@@ -39,6 +51,7 @@ export function action<T>(action: ActionParams<T>): NonReuseableTimeline<T> {
       let actionTime = 0
       const memos = updates.map(() => ({}))
       timelineYield.update = (state, clock) => {
+        if (!initReady) return
         actionTime += clock.delta
         let shouldContinue: boolean | undefined
         for (let i = 0; i < updates.length; i++) {
@@ -63,6 +76,7 @@ export function action<T>(action: ActionParams<T>): NonReuseableTimeline<T> {
       let firstUpdate = true
       const memo = {}
       timelineYield.update = (state, clock) => {
+        if (!initReady) return
         actionTime += clock.delta
         if (update(state, clock, actionTime, memo) === false) {
           internalAbortController.abort()
