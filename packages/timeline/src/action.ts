@@ -24,25 +24,9 @@ export type ActionParams<T> = {
  */
 export function action<T>(action: ActionParams<T>): NonReuseableTimeline<T> {
   return scope(async function* (abortSignal) {
-    // Gate updates until async init resolves
-    let initReady = action.init == null
-    const initResult = action.init?.()
-    if (initResult instanceof Promise) {
-      initResult
-        .then((cleanup) => {
-          if (typeof cleanup === 'function') {
-            abortSignal.addEventListener('abort', cleanup, { once: true })
-          }
-        })
-        .catch(console.error)
-        .finally(() => {
-          initReady = true
-        })
-    } else {
-      initReady = true
-      if (typeof initResult === 'function') {
-        abortSignal.addEventListener('abort', initResult, { once: true })
-      }
+    const cleanup = await action.init?.()
+    if (cleanup != null) {
+      abortSignal.addEventListener('abort', cleanup, { once: true })
     }
 
     const internalAbortController = new SynchronousAbortController()
@@ -55,7 +39,6 @@ export function action<T>(action: ActionParams<T>): NonReuseableTimeline<T> {
       let actionTime = 0
       const memos = updates.map(() => ({}))
       timelineYield.update = (state, clock) => {
-        if (!initReady) return
         actionTime += clock.delta
         let shouldContinue: boolean | undefined
         for (let i = 0; i < updates.length; i++) {
@@ -80,7 +63,6 @@ export function action<T>(action: ActionParams<T>): NonReuseableTimeline<T> {
       let firstUpdate = true
       const memo = {}
       timelineYield.update = (state, clock) => {
-        if (!initReady) return
         actionTime += clock.delta
         if (update(state, clock, actionTime, memo) === false) {
           internalAbortController.abort()
