@@ -13,7 +13,7 @@ export type ActionUpdate<T> = (
 ) => boolean | void | undefined
 
 export type ActionParams<T> = {
-  readonly init?: () => (() => void) | undefined | void
+  readonly init?: () => (() => void) | Promise<(() => void) | void> | undefined | void
   readonly update?: ActionUpdate<T> | Array<ActionUpdate<T>>
   readonly until?: Promise<unknown>
 }
@@ -24,7 +24,7 @@ export type ActionParams<T> = {
  */
 export function action<T>(action: ActionParams<T>): NonReuseableTimeline<T> {
   return scope(async function* (abortSignal) {
-    const cleanup = action.init?.()
+    const cleanup = await action.init?.()
     if (cleanup != null) {
       abortSignal.addEventListener('abort', cleanup, { once: true })
     }

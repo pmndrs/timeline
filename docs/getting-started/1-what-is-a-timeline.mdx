@@ -12,9 +12,10 @@ At a high level, timelines are composed of actions and sub‑timelines. You chai
 
 An action is a unit of work you `yield*` from a timeline. It can:
 
+- provide an `init` function that runs once before the first update (can be sync or async; updates are deferred until it resolves). Return a cleanup function to run on abort.
 - provide an `update(state, clock)` called every frame; return `false` to finish
 - provide an `until` promise to decide when it finishes
-- or both to run something every frame until another event happens
+- or any combination of the above
 
 Use an action when you want to perform work over time, wait for something to happen, or both.
 
