@@ -338,6 +338,7 @@ class for managing a state graph with transitions; used by `graph` to orchestrat
 
 - `addState(name: string, timeline: ReusableTimeline<T, S | undefined | void>, transitionTo?: GraphStateTransitions<T, S>)` → `void`
 - `removeState(name: string)` → `void`
+- `getState()` → `string`: returns the current state name
 - `setState(name: string)` → `void`
 - `run()` → `NonReuseableTimeline<T>`: runs the graph loop and handles transitions (throws an error when run concurrently)
 
