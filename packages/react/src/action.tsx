@@ -11,8 +11,8 @@ export function Action({
     () => ({}),
     [],
   )
-  //if we have no dependencies, we re-write the params so that the are available when the action is (re-)started
-  //if we have depdendencies, we re-attach the raw input params when they change
+  //if we have no dependencies, we re-write the params so that they are available when the action is (re-)started
+  //if we have dependencies, we re-attach the raw input params when they change
   if (dependencies == null) {
     for (const key in paramsWithoutDeps) {
       delete paramsWithoutDeps[key as keyof typeof paramsWithoutDeps]

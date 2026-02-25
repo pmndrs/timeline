@@ -283,7 +283,7 @@ function quaternionToTangentSpace(quaternion: Quaternion, target: Vector3, delta
     return
   }
   const theta = Math.acos(w)
-  //nromalize target and multiply by theta (direction = axis, length = angle)
+  //normalize target and multiply by theta (direction = axis, length = angle)
   target.multiplyScalar(theta / s)
   //cut off very small values to prevent numerical drift when converting quaternions from and to tangent space
 }

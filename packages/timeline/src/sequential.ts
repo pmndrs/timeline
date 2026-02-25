@@ -8,7 +8,7 @@ export class SequentialTimeline<T = unknown> extends Singleton<T> {
 
   attach(index: number, timeline: ReusableTimeline<T>): void {
     if (this.timelines[index] != null) {
-      throw new Error(`there's already an timeline set at index '${index}'`)
+      throw new Error(`there's already a timeline set at index '${index}'`)
     }
     this.timelines[index] = timeline
   }
