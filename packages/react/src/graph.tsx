@@ -3,7 +3,7 @@ import { RootState } from '@react-three/fiber'
 import { createContext, forwardRef, ReactNode, useContext, useEffect, useImperativeHandle, useMemo } from 'react'
 import { AttachableProvider, useAttachTimeline } from './attachable.js'
 
-const GrapthContext = createContext<GraphTimeline<RootState> | undefined>(undefined)
+const GraphContext = createContext<GraphTimeline<RootState> | undefined>(undefined)
 
 export const Graph = forwardRef<
   GraphTimeline<RootState>,
@@ -14,10 +14,10 @@ export const Graph = forwardRef<
   graph.exitState = exitState
   useAttachTimeline(() => graph.run(), [])
   useImperativeHandle(ref, () => graph, [graph])
-  return <GrapthContext.Provider value={graph}>{children}</GrapthContext.Provider>
+  return <GraphContext.Provider value={graph}>{children}</GraphContext.Provider>
 })
 
-export function GrapthState({
+export function GraphState({
   name,
   transitionTo,
   children,
@@ -28,14 +28,14 @@ export function GrapthState({
   children?: ReactNode
   dependencies?: Array<unknown>
 }) {
-  const graph = useContext(GrapthContext)
+  const graph = useContext(GraphContext)
   if (graph == null) {
-    throw new Error(`GrapthState can only be used inside the Graph component.`)
+    throw new Error(`GraphState can only be used inside the Graph component.`)
   }
   const replacable = useMemo(() => new ReplacableTimeline(), [])
   const transitionsWithoutDeps = useMemo<GraphTimelineStateTransitions<RootState>>(() => ({}), [])
-  //if we have no dependencies, we re-write the transitions so that the are available when the graph state is (re-)started
-  //if we have depdendencies, we re-attach the raw input transitions when they change
+  //if we have no dependencies, we re-write the transitions so that they are available when the graph state is (re-)started
+  //if we have dependencies, we re-attach the raw input transitions when they change
   if (dependencies == null) {
     for (const key in transitionsWithoutDeps) {
       delete transitionsWithoutDeps[key as keyof typeof transitionsWithoutDeps]

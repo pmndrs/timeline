@@ -26,7 +26,7 @@ export class SwitchTimeline<T = unknown> {
       throw new Error(`the switch case index must be a positive number including 0`)
     }
     if (this.cases[index] != null) {
-      throw new Error(`cannot attach to case "${index}" that has a already another timeline attached`)
+      throw new Error(`cannot attach to case "${index}" that already has another timeline attached`)
     }
     this.cases[index] = { condition, timeline }
   }
@@ -66,7 +66,7 @@ export class SwitchTimeline<T = unknown> {
         do {
           restartController = new SynchronousAbortController()
           yield* abortable((_this.cases[caseIndex]?.timeline ?? TimelineFallbacks.Idle)(), restartController.signal)
-          //if we arrive at the while condition without beeing aborted, that means the current timeline successfully finished
+          //if we arrive at the while condition without being aborted, that means the current timeline successfully finished
         } while (restartController.signal.aborted)
       },
     )

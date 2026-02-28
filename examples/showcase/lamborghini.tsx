@@ -164,7 +164,7 @@ export function Lamborghini(props: any) {
     // ⬇⬇⬇ All this is probably better fixed in Blender ...
     Object.values(nodes).forEach((node: any) => {
       if (node.isMesh) {
-        // Fix glas, normals look messed up in the original, most likely deformed meshes bc of compression :/
+        // Fix glass, normals look messed up in the original, most likely deformed meshes bc of compression :/
         if (node.name.startsWith('glass')) node.geometry.computeVertexNormals()
         // Fix logo, too dark
         if (node.name === 'silver_001_BreakDiscs_0')

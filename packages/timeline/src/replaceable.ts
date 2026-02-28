@@ -15,7 +15,7 @@ export class ReplacableTimeline<T = unknown> {
 
   attach(timeline: ReusableTimeline<T>): void {
     if (this.isAttached) {
-      throw new Error(`cannot attach to a timeline that has a already another timeline attached`)
+      throw new Error(`cannot attach to a timeline that already has another timeline attached`)
     }
     this.isAttached = true
     this.currentTimeline = timeline
@@ -59,7 +59,7 @@ export class ReplacableTimeline<T = unknown> {
         SynchronousAbortSignal.any([restartController.signal, cancelController.signal]),
       )
       this.restartControllers.delete(restartController)
-      //if we arrive at the while condition without beeing aborted, that means the current timeline successfully finished, or the canceController was called
+      //if we arrive at the while condition without being aborted, that means the current timeline successfully finished, or the cancelController was called
     } while (restartController.signal.aborted)
   }
 }
