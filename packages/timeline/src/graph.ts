@@ -95,6 +95,10 @@ export class GraphTimeline<T = unknown> extends Singleton<T> {
     this.stateMap.get(name)?.unattach()
   }
 
+  getState() {
+    return this.currentState
+  }
+
   setState(name: string) {
     if (this.currentState === name) {
       return
