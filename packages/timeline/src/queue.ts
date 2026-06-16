@@ -1,4 +1,7 @@
-import { NonReuseableTimeline, ReusableTimeline, Singleton } from './index.js'
+import { type NonReuseableTimeline, type ReusableTimeline } from './index.js'
+// Import Singleton from its own module, not the barrel: queue.ts is re-exported by index.ts before
+// singleton.ts, so a barrel import leaves Singleton undefined when QueueTimeline extends it.
+import { Singleton } from './singleton.js'
 
 export class QueueTimeline<T = unknown> extends Singleton<T> {
   private readonly entries: Array<ReusableTimeline<T>> = []

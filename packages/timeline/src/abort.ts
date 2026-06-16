@@ -31,7 +31,6 @@ export class SynchronousAbortSignal extends EventTarget implements AbortSignal {
   static any(signals: AbortSignal[]): AbortSignal {
     const controller = new SynchronousAbortController()
 
-    // If any signal is already aborted, propagate immediately.
     for (const signal of signals) {
       if (signal.aborted) {
         controller.abort(signal.reason)
@@ -39,21 +38,18 @@ export class SynchronousAbortSignal extends EventTarget implements AbortSignal {
       }
     }
 
-    // Otherwise, listen for aborts
-    const onAbort = (event: Event) => {
-      const target = event.currentTarget as AbortSignal
-      controller.abort(target.reason)
-      cleanup()
-    }
-
-    const cleanup = () => {
-      for (const signal of signals) {
-        signal.removeEventListener('abort', onAbort)
-      }
-    }
-
+    // Each listener captures its own signal (rather than reading event.currentTarget, which can be
+    // null under re-entrant synchronous dispatch) and is removed via the cleanup signal once any fires.
+    const cleanup = new AbortController()
     for (const signal of signals) {
-      signal.addEventListener('abort', onAbort)
+      signal.addEventListener(
+        'abort',
+        () => {
+          controller.abort(signal.reason)
+          cleanup.abort()
+        },
+        { signal: cleanup.signal },
+      )
     }
 
     return controller.signal

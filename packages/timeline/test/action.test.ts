@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { step, waitForSetup, waitForCleanup } from './helpers.js'
-import { runTimeline, action } from '../src/index.js'
+import { runTimeline, action, SynchronousAbortController } from '../src/index.js'
 
 describe('action cleanup', () => {
   it('calls cleanup when update returns false', async () => {
@@ -36,7 +36,7 @@ describe('action cleanup', () => {
 
   it('registers cleanup against global abort if provided via get-global-abort-signal', async () => {
     let cleaned = 0
-    const ctrl = SynchronousAbortController()
+    const ctrl = new SynchronousAbortController()
     const timeline = action({
       init: () => () => {
         cleaned++
