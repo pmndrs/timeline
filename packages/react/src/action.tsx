@@ -1,4 +1,4 @@
-import { ActionParams, action } from '@pmndrs/timeline'
+import { ActionParams, action, Until } from '@pmndrs/timeline'
 import { RootState } from '@react-three/fiber'
 import { useMemo } from 'react'
 import { useAttachTimeline } from './attachable.js'
@@ -6,8 +6,8 @@ import { useAttachTimeline } from './attachable.js'
 export function Action({
   dependencies,
   ...params
-}: { dependencies?: Array<unknown>; until?: () => Promise<unknown> } & Omit<ActionParams<RootState>, 'until'>) {
-  const paramsWithoutDeps = useMemo<{ until?: () => Promise<unknown> } & Omit<ActionParams<RootState>, 'until'>>(
+}: { dependencies?: Array<unknown>; until?: () => Until<RootState> } & Omit<ActionParams<RootState>, 'until'>) {
+  const paramsWithoutDeps = useMemo<{ until?: () => Until<RootState> } & Omit<ActionParams<RootState>, 'until'>>(
     () => ({}),
     [],
   )

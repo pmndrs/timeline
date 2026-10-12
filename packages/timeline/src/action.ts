@@ -1,5 +1,4 @@
-import { SynchronousAbortController } from './abort.js'
-import { scope, type NonReuseableTimeline, type TimelineClock, type TimelineYieldAction } from './index.js'
+import type { NonReuseableTimeline, TimelineClock } from './index.js'
 
 /**
  * @returns true if the action update should continue (default)
@@ -12,65 +11,113 @@ export type ActionUpdate<T> = (
   memo: Record<string, any>,
 ) => boolean | void | undefined
 
+/**
+ * checked at the start of every frame with the time the action has run before this frame
+ * @returns true once the action is done
+ */
+export type UntilCondition<T> = (state: T, clock: TimelineClock, actionTime: number) => boolean
+
+/**
+ * when an action is done: a synchronous condition, or a promise for external events
+ * a promise is observed via `.then`, so the action notices its resolution on the next frame at the earliest (at most one frame of latency);
+ * use conditions (e.g. `timePassed`) for sequencing within the simulation
+ */
+export type Until<T> = UntilCondition<T> | Promise<unknown>
+
+type Cleanup = () => void
+
 export type ActionParams<T> = {
-  readonly init?: () => (() => void) | Promise<(() => void) | void> | undefined | void
+  /**
+   * runs once before the first update; a returned cleanup runs when the action ends
+   * a returned promise delays the first update until it resolves
+   */
+  readonly init?: () => Cleanup | Promise<Cleanup | void> | undefined | void
   readonly update?: ActionUpdate<T> | Array<ActionUpdate<T>>
-  readonly until?: Promise<unknown>
+  readonly until?: Until<T>
 }
 
 /**
  * core function for yielding an action used via `yield* action({...})`
  * allows to run this action `until` a certain event and execute an `update` function until the action is finished
  */
-export function action<T>(action: ActionParams<T>): NonReuseableTimeline<T> {
-  return scope(async function* (abortSignal) {
-    const cleanup = await action.init?.()
-    if (cleanup != null) {
-      abortSignal.addEventListener('abort', cleanup, { once: true })
-    }
-
-    const internalAbortController = new SynchronousAbortController()
-    if (action.until != null) {
-      action.until.then(() => internalAbortController.abort()).catch(console.error)
-    }
-    const timelineYield: TimelineYieldAction<T> = { type: 'action', abortSignal: internalAbortController.signal }
-    if (action.update != null && Array.isArray(action.update)) {
-      const updates = action.update
-      let actionTime = 0
-      const memos = updates.map(() => ({}))
-      timelineYield.update = (state, clock) => {
-        actionTime += clock.delta
-        let shouldContinue: boolean | undefined
-        for (let i = 0; i < updates.length; i++) {
-          const currentShouldContinue = updates[i](state, clock, actionTime, memos[i])
-          if (currentShouldContinue == null) {
-            continue
-          }
-          if (shouldContinue == null || shouldContinue == null) {
-            shouldContinue = currentShouldContinue
-          }
-        }
-        shouldContinue ??= true
-        if (!shouldContinue) {
-          internalAbortController.abort()
+export function* action<T>({ init, update, until }: ActionParams<T>): NonReuseableTimeline<T> {
+  const initialized = initialize(init)
+  const isDone = toCondition(until)
+  const updates = update == null ? [] : Array.isArray(update) ? update : [update]
+  const memos = updates.map(() => ({}))
+  let actionTime = 0
+  try {
+    yield (state, clock) => {
+      if (!initialized.isReady()) {
+        return 'running'
+      }
+      if (isDone(state, clock, actionTime)) {
+        return 'skipped'
+      }
+      actionTime += clock.delta
+      //the first update that returns a boolean decides whether the action continues
+      let shouldContinue: boolean | undefined
+      for (let i = 0; i < updates.length; i++) {
+        const result = updates[i](state, clock, actionTime, memos[i])
+        if (shouldContinue == null && typeof result === 'boolean') {
+          shouldContinue = result
         }
       }
+      return shouldContinue === false ? 'finished' : 'running'
     }
+  } finally {
+    initialized.cleanup()
+  }
+}
 
-    if (action.update != null && !Array.isArray(action.update)) {
-      const update = action.update
-      let actionTime = 0
-      let firstUpdate = true
-      const memo = {}
-      timelineYield.update = (state, clock) => {
-        actionTime += clock.delta
-        if (update(state, clock, actionTime, memo) === false) {
-          internalAbortController.abort()
-        }
-        firstUpdate = false
+function initialize(init: ActionParams<unknown>['init']): { isReady: () => boolean; cleanup: Cleanup } {
+  const result = init?.()
+  if (result == null || typeof result === 'function') {
+    return { isReady: () => true, cleanup: () => result?.() }
+  }
+  let ended = false
+  let cleanup: Cleanup | void
+  const isReady = observe(
+    result.then((value) => {
+      cleanup = value
+      //the action ended before its init resolved
+      if (ended) {
+        value?.()
       }
-    }
+    }),
+  )
+  return {
+    isReady,
+    cleanup: () => {
+      ended = true
+      cleanup?.()
+    },
+  }
+}
 
-    yield timelineYield
-  })
+function toCondition<T>(until: Until<T> | undefined): UntilCondition<T> {
+  if (until == null) {
+    return () => false
+  }
+  if (typeof until === 'function') {
+    return until
+  }
+  return observe(until)
+}
+
+/**
+ * @returns a poll that is true once the promise resolved and throws once it rejected
+ */
+function observe(promise: Promise<unknown>): () => boolean {
+  let outcome: { error: unknown } | 'resolved' | undefined
+  promise.then(
+    () => (outcome = 'resolved'),
+    (error: unknown) => (outcome = { error }),
+  )
+  return () => {
+    if (typeof outcome === 'object') {
+      throw outcome.error
+    }
+    return outcome === 'resolved'
+  }
 }

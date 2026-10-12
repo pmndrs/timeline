@@ -1,10 +1,11 @@
-import { SynchronousAbortController, SynchronousAbortSignal } from './abort.js'
-import { abortable } from './abortable.js'
-import { TimelineFallbacks, type NonReuseableTimeline, type ReusableTimeline } from './index.js'
+import { TimelineFallbacks } from './misc.js'
+import { TimelineRunner } from './runner.js'
+import type { NonReuseableTimeline, ReusableTimeline } from './index.js'
+
+type Run<T> = { runner: TimelineRunner<T>; restart: boolean }
 
 export class ReplacableTimeline<T = unknown> {
-  private restartControllers = new Set<AbortController>()
-  private cancelControllers = new Set<AbortController>()
+  private readonly runs = new Set<Run<T>>()
 
   private currentTimeline: ReusableTimeline<T>
   private isAttached = false
@@ -32,34 +33,35 @@ export class ReplacableTimeline<T = unknown> {
   }
 
   private restart() {
-    for (const controller of this.restartControllers) {
-      controller.abort()
+    for (const run of this.runs) {
+      run.restart = true
+      run.runner.cancel()
     }
-    this.cancelControllers.clear()
-    this.restartControllers.clear()
   }
 
+  /**
+   * ends all current runs
+   */
   cancel() {
-    for (const controller of this.cancelControllers) {
-      controller.abort()
+    for (const run of this.runs) {
+      run.restart = false
+      run.runner.cancel()
     }
-    this.cancelControllers.clear()
-    this.restartControllers.clear()
+    //a later restart must not revive cancelled runs
+    this.runs.clear()
   }
 
-  async *run(): NonReuseableTimeline<T> {
-    let restartController: AbortController
+  *run(): NonReuseableTimeline<T> {
+    let restart: boolean
     do {
-      restartController = new SynchronousAbortController()
-      this.restartControllers.add(restartController)
-      const cancelController = new SynchronousAbortController()
-      this.cancelControllers.add(cancelController)
-      yield* abortable(
-        this.currentTimeline,
-        SynchronousAbortSignal.any([restartController.signal, cancelController.signal]),
-      )
-      this.restartControllers.delete(restartController)
-      //if we arrive at the while condition without being aborted, that means the current timeline successfully finished, or the cancelController was called
-    } while (restartController.signal.aborted)
+      const run: Run<T> = { runner: new TimelineRunner(this.currentTimeline), restart: false }
+      this.runs.add(run)
+      try {
+        yield* run.runner.run()
+      } finally {
+        this.runs.delete(run)
+      }
+      restart = run.restart
+    } while (restart)
   }
 }

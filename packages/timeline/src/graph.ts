@@ -1,16 +1,22 @@
-import { action, ActionUpdate } from './action.js'
-import { type NonReuseableTimeline, type ReusableTimeline } from './index.js'
+import { action, type ActionUpdate } from './action.js'
 import { forever, TimelineFallbacks } from './misc.js'
 import { parallel } from './parallel.js'
 import { ReplacableTimeline } from './replaceable.js'
 import { Singleton } from './singleton.js'
+import type { NonReuseableTimeline, ReusableTimeline } from './index.js'
 
 export type GraphTimelineStateTransition<T = unknown> = {
   /**
    * @deprecated use `whenUpdate` instead
    */
   when?: (...params: Parameters<ActionUpdate<T>>) => boolean
+  /**
+   * transition once the promise resolves; observed on the next frame at the earliest
+   */
   whenPromise?: () => Promise<unknown>
+  /**
+   * transition once this returns true; evaluated every frame
+   */
   whenUpdate?: (...params: Parameters<ActionUpdate<T>>) => boolean
 }
 
@@ -55,13 +61,13 @@ export class GraphTimeline<T = unknown> extends Singleton<T> {
       this.stateMap.set(name, (entry = new ReplacableTimeline(this.fallback)))
     }
     const _this = this
-    entry.attach(async function* () {
+    entry.attach(function* () {
       let transitions: Array<NonReuseableTimeline<T>> = []
       if (transitionTo != null) {
         //the transitionTo object is evaluated only at the start of a timeline, changing its content during the timeline has no effect
         transitions = Object.entries<GraphTimelineStateTransition<T> | string | (() => string)>(transitionTo)
           .filter((entry): entry is [string, GraphTimelineStateTransition<T>] => typeof entry[1] === 'object')
-          .map(async function* ([name, condition]): NonReuseableTimeline<T> {
+          .map(function* ([name, condition]): NonReuseableTimeline<T> {
             const whenUpdate = condition.whenUpdate ?? condition.when
             const whenPromise = condition.whenPromise
             if (whenUpdate != null) {
@@ -74,7 +80,7 @@ export class GraphTimeline<T = unknown> extends Singleton<T> {
             _this.currentState = name
           })
       }
-      yield* parallel('race', ...transitions, async function* () {
+      yield* parallel('race', ...transitions, function* () {
         const newState = yield* timeline()
         const finalStateName = transitionTo?.finally
         if (finalStateName != null && typeof finalStateName != 'object') {
@@ -108,7 +114,7 @@ export class GraphTimeline<T = unknown> extends Singleton<T> {
     this.currentState = name
   }
 
-  protected async *unsafeRun() {
+  protected *unsafeRun(): NonReuseableTimeline<T> {
     if (this.resetOnRun) {
       this.currentState = this.enterState
     }
@@ -127,7 +133,10 @@ export class GraphTimeline<T = unknown> extends Singleton<T> {
  * @param enterStateName is the name of the initial state
  * @param stateMap is the map of states including their transitions to other states
  */
-export async function* graph<T>(enterStateName: string, stateMap: GraphTimelineStateMap<T>, exitStateName?: string) {
-  const graph = new GraphTimeline<T>(enterStateName, stateMap, exitStateName)
-  yield* graph.run()
+export function* graph<T>(
+  enterStateName: string,
+  stateMap: GraphTimelineStateMap<T>,
+  exitStateName?: string,
+): NonReuseableTimeline<T> {
+  yield* new GraphTimeline<T>(enterStateName, stateMap, exitStateName).run()
 }

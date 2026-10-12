@@ -1,13 +1,7 @@
-import { SynchronousAbortController } from './abort.js'
-import {
-  abortable,
-  action,
-  type ActionUpdate,
-  parallel,
-  TimelineFallbacks,
-  type NonReuseableTimeline,
-  type ReusableTimeline,
-} from './index.js'
+import { TimelineFallbacks } from './misc.js'
+import { TimelineRunner } from './runner.js'
+import type { ActionUpdate } from './action.js'
+import type { NonReuseableTimeline, ReusableTimeline } from './index.js'
 
 export type SwitchTimelineCase<T> = {
   /**
@@ -32,48 +26,38 @@ export class SwitchTimeline<T = unknown> {
   }
 
   unattach(index: number) {
-    //no need to cancel the case timeline because the update will cancel it either way
+    //no need to cancel the case timeline because the next frame will switch away from it
     delete this.cases[index]
   }
 
-  async *run(): NonReuseableTimeline<T> {
-    let restartController = new SynchronousAbortController()
+  /**
+   * every frame, runs the first case whose condition holds, restarting when the case changes
+   * finishes when the running case's timeline finishes
+   */
+  *run(): NonReuseableTimeline<T> {
+    let runner: TimelineRunner<T> | undefined
     let caseIndex = -1
-    const _this = this
-    yield* parallel(
-      'race',
-      action({
-        update: (...params) => {
-          let newCaseIndex = -1
-          for (let i = 0; i < this.cases.length; i++) {
-            const case_ = this.cases[i]
-            if (case_ == null) {
-              continue
-            }
-            if (case_.condition == null || case_.condition(...params)) {
-              newCaseIndex = i
-              break
-            }
-          }
-          if (caseIndex == newCaseIndex) {
-            return
-          }
+    let actionTime = 0
+    const memo = {}
+    try {
+      yield (state, clock) => {
+        actionTime += clock.delta
+        const newCaseIndex = this.cases.findIndex(
+          (case_) => case_ != null && (case_.condition == null || case_.condition(state, clock, actionTime, memo)),
+        )
+        if (runner == null || newCaseIndex != caseIndex) {
           caseIndex = newCaseIndex
-          restartController.abort()
-        },
-      }),
-      async function* () {
-        do {
-          restartController = new SynchronousAbortController()
-          yield* abortable((_this.cases[caseIndex]?.timeline ?? TimelineFallbacks.Idle)(), restartController.signal)
-          //if we arrive at the while condition without being aborted, that means the current timeline successfully finished
-        } while (restartController.signal.aborted)
-      },
-    )
+          runner?.cancel()
+          runner = new TimelineRunner(this.cases[caseIndex]?.timeline ?? TimelineFallbacks.Idle)
+        }
+        return runner.step(state, clock)
+      }
+    } finally {
+      runner?.cancel()
+    }
   }
 }
 
-export async function* switch_<T>(cases: Array<SwitchTimelineCase<T>>) {
-  const _switch = new SwitchTimeline<T>(cases)
-  yield* _switch.run()
+export function* switch_<T>(cases: Array<SwitchTimelineCase<T>>): NonReuseableTimeline<T> {
+  yield* new SwitchTimeline<T>(cases).run()
 }

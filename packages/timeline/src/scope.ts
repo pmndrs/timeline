@@ -1,4 +1,4 @@
-import { SynchronousAbortController, SynchronousAbortSignal } from './abort.js'
+import { SynchronousAbortController } from './abort.js'
 import type { NonReuseableTimeline } from './index.js'
 
 /**
@@ -11,19 +11,11 @@ import type { NonReuseableTimeline } from './index.js'
  *    yield* action(...)
  * })
  */
-export async function* scope<T>(
-  timeline: (abortSignal: AbortSignal) => NonReuseableTimeline<T>,
-): NonReuseableTimeline<T> {
-  const internalAbortController = new SynchronousAbortController()
-  let externalAbortSignal!: AbortSignal
-  yield {
-    type: 'get-global-abort-signal',
-    callback: (abortSignal) => (externalAbortSignal = abortSignal),
+export function* scope<T>(timeline: (abortSignal: AbortSignal) => NonReuseableTimeline<T>): NonReuseableTimeline<T> {
+  const controller = new SynchronousAbortController()
+  try {
+    yield* timeline(controller.signal)
+  } finally {
+    controller.abort()
   }
-  if (externalAbortSignal.aborted) {
-    return
-  }
-  yield* timeline(SynchronousAbortSignal.any([internalAbortController.signal, externalAbortSignal]))
-  //abort because scope successfully ran through
-  internalAbortController.abort()
 }

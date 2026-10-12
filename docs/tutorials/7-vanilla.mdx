@@ -102,7 +102,7 @@ rgbe.load(url, (hdr) => {
 })
 
 // timeline
-async function* mainTimeline() {
+function* mainTimeline() {
   while (true) {
     yield* action({ update: lookAt(camera, redPill, spring(springPresets.stiff)) })
     yield* action({ until: timePassed(0.3, 'seconds') })
@@ -207,7 +207,7 @@ scene.add(bluePill)
 4) Create and start the timeline
 
 ```ts
-async function* mainTimeline() {
+function* mainTimeline() {
   while (true) {
     yield* action({ update: lookAt(camera, redPill, spring(springPresets.stiff)) })
     yield* action({ until: timePassed(0.3, 'seconds') })

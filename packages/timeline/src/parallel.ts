@@ -1,29 +1,9 @@
-import { SynchronousAbortController, SynchronousAbortSignal } from './abort.js'
-import { action } from './action.js'
-import {
-  type NonReuseableTimeline,
-  runTimelineAsync,
-  type TimelineYieldActionUpdate,
-  type ReusableTimeline,
-  abortSignalToPromise,
-  Timeline,
-} from './index.js'
+import { TimelineRunner } from './runner.js'
 import { Singleton } from './singleton.js'
+import type { ActionStatus, NonReuseableTimeline, ReusableTimeline, Timeline, TimelineClock } from './index.js'
 
 export class ParallelTimeline<T = unknown> extends Singleton<T> {
-  private runningState?: {
-    internalAbortController: AbortController
-    timelines: Map<
-      ReusableTimeline<T>,
-      {
-        ref: {
-          current?: TimelineYieldActionUpdate<T>
-        }
-        finished: boolean
-        abortController: AbortController
-      }
-    >
-  }
+  private runners?: Map<ReusableTimeline<T>, TimelineRunner<T>>
 
   constructor(
     private readonly type: 'all' | 'race',
@@ -34,79 +14,70 @@ export class ParallelTimeline<T = unknown> extends Singleton<T> {
 
   attach(timeline: ReusableTimeline<T>): void {
     this.timelines.add(timeline)
-    this.startTimeline(timeline)
+    this.runners?.set(timeline, new TimelineRunner(timeline))
   }
 
   unattach(timeline: ReusableTimeline<T>): void {
     this.timelines.delete(timeline)
-    if (this.runningState == null) {
-      return
-    }
-    this.runningState.timelines.get(timeline)?.abortController.abort()
+    this.runners?.get(timeline)?.cancel()
+    this.runners?.delete(timeline)
   }
 
-  private async startTimeline(timeline: ReusableTimeline<T>) {
-    const runningState = this.runningState
-    if (runningState == null) {
-      return
+  protected *unsafeRun(): NonReuseableTimeline<T> {
+    const runners = new Map<ReusableTimeline<T>, TimelineRunner<T>>()
+    this.runners = runners
+    try {
+      for (const timeline of this.timelines) {
+        runners.set(timeline, new TimelineRunner(timeline))
+      }
+      yield (state, clock) => this.step(runners, state, clock)
+    } finally {
+      this.runners = undefined
+      for (const runner of runners.values()) {
+        runner.cancel()
+      }
     }
-    const timelineRunningState: (typeof runningState)['timelines'] extends Map<any, infer K> ? K : never = {
-      ref: {},
-      finished: false,
-      abortController: new SynchronousAbortController(),
-    }
-
-    runningState.timelines.set(timeline, timelineRunningState)
-    await runTimelineAsync(
-      timeline(),
-      timelineRunningState.ref,
-      SynchronousAbortSignal.any([
-        runningState.internalAbortController.signal,
-        timelineRunningState.abortController.signal,
-      ]),
-    )
-    timelineRunningState.finished = true
-    if (this.type === 'all' && !runningState.timelines.values().every((value) => value.finished)) {
-      return
-    }
-    runningState.internalAbortController.abort()
   }
 
-  protected async *unsafeRun(): NonReuseableTimeline<T> {
-    const runningState: typeof this.runningState = (this.runningState = {
-      internalAbortController: new SynchronousAbortController(),
-      timelines: new Map(),
-    })
-    for (const timeline of this.timelines) {
-      this.startTimeline(timeline)
+  private step(runners: Map<ReusableTimeline<T>, TimelineRunner<T>>, state: T, clock: TimelineClock): ActionStatus {
+    if (this.isDone(runners)) {
+      return 'skipped'
     }
-    yield* action({
-      init: () => () => {
-        this.runningState = undefined
-        runningState.internalAbortController.abort()
-      },
-      update: (state, clock) => {
-        for (const { ref } of runningState.timelines.values()) {
-          ref.current?.(state, clock)
-        }
-      },
-      until: abortSignalToPromise(runningState.internalAbortController.signal),
-    })
+    let usedFrame = false
+    for (const runner of runners.values()) {
+      if (runner.finished) {
+        continue
+      }
+      if (runner.step(state, clock) != 'skipped') {
+        usedFrame = true
+      }
+      if (this.type === 'race' && runner.finished) {
+        break
+      }
+    }
+    if (!this.isDone(runners)) {
+      return 'running'
+    }
+    return usedFrame ? 'finished' : 'skipped'
+  }
+
+  private isDone(runners: Map<ReusableTimeline<T>, TimelineRunner<T>>): boolean {
+    const finished = [...runners.values()].map((runner) => runner.finished)
+    return this.type === 'race' ? finished.includes(true) : !finished.includes(false)
   }
 }
 
 /**
  * function for executing multiple timelines in parallel
+ * each timeline receives every frame; `false` entries are skipped
  * @param type when to stop all timelines - either wait for `"all"` or cancel all timelines once the first timeline is done via `"race"`
  */
-export async function* parallel<T>(type: 'all' | 'race', ...timelines: Array<Timeline<T> | boolean>) {
-  const parallel = new ParallelTimeline<T>(
-    type,
-    new Set(
-      timelines
-        .filter((timeline) => typeof timeline != 'boolean')
-        .map((timeline) => (typeof timeline === 'function' ? timeline : () => timeline)),
-    ) as Set<ReusableTimeline>,
-  )
-  yield* parallel.run()
+export function* parallel<T>(
+  type: 'all' | 'race',
+  ...timelines: Array<Timeline<T> | boolean>
+): NonReuseableTimeline<T> {
+  const reusables = timelines
+    .filter((timeline) => typeof timeline != 'boolean')
+    .map((timeline): ReusableTimeline<T> => (typeof timeline === 'function' ? timeline : () => timeline))
+  yield* new ParallelTimeline<T>(type, new Set(reusables)).run()
 }

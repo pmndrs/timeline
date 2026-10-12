@@ -1,4 +1,4 @@
-import { GraphTimelineStateMap, NonReuseableTimeline, ReusableTimeline, graph } from '@pmndrs/timeline'
+import { GraphTimelineStateMap, graph } from '@pmndrs/timeline'
 import { RootState } from '@react-three/fiber'
 import { useRunTimeline } from './run.js'
 
@@ -10,10 +10,10 @@ export const useTimeline = useRunTimeline
 /**
  * @deprecated use <GraphTimeline> instead
  */
-export function useTimelineGraph<T extends ReusableTimeline<RootState, string | undefined | void>>(
+export function useTimelineGraph(
   initialStateName: string,
-  stateMap: GraphTimelineStateMap<T>,
+  stateMap: GraphTimelineStateMap<RootState>,
   deps: Array<any>,
 ) {
-  useRunTimeline(() => graph(initialStateName, stateMap) as NonReuseableTimeline<RootState, any>, deps)
+  useRunTimeline(() => graph(initialStateName, stateMap), deps)
 }

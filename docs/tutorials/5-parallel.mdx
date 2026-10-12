@@ -27,7 +27,7 @@ import { useRef } from 'react'
 import { Mesh, Vector3 } from 'three'
 import { useRunTimeline, action, parallel, transition, velocity } from '@react-three/timeline'
 
-async function* moveTo(ref: React.RefObject<Mesh>, to: Vector3) {
+function* moveTo(ref: React.RefObject<Mesh>, to: Vector3) {
 if (!ref.current) return
 yield* action({ update: transition(ref.current.position, to, velocity(1, 5)) })
 }
@@ -35,7 +35,7 @@ yield* action({ update: transition(ref.current.position, to, velocity(1, 5)) })
 function Scene() {
 const cubeA = useRef<Mesh>(null)
 const cubeB = useRef<Mesh>(null)
-useRunTimeline(async function* () {
+useRunTimeline(function* () {
 while (true) {
 yield* parallel('all', moveTo(cubeA, new Vector3(-3.5, 0.5, 0)), moveTo(cubeB, new Vector3(1.5, -0.5, 0)))
 // Then nudge both back to origin, racing the first finisher
@@ -85,7 +85,7 @@ createRoot(root).render(<App />)
 1. Define a reusable `moveTo` sub-timeline (what it is): a small timeline that transitions a mesh position to a target using `transition(..., spring())`.
 
 ```tsx
-export async function* moveTo(ref: React.RefObject<Mesh>, to: Vector3) {
+export function* moveTo(ref: React.RefObject<Mesh>, to: Vector3) {
   if (!ref.current) return
   yield* action({ update: transition(ref.current.position, to, velocity(1, 5)) })
 }
@@ -126,7 +126,7 @@ import { Vector3 } from 'three'
 function Scene() {
   const cubeA = useRef<Mesh>(null)
   const cubeB = useRef<Mesh>(null)
-  useRunTimeline(async function* () {
+  useRunTimeline(function* () {
     while (true) {
       yield* parallel('all', moveTo(cubeA, new Vector3(-3.5, 0.5, 0)), moveTo(cubeB, new Vector3(1.5, -0.5, 0)))
       yield* parallel('all', moveTo(cubeA, new Vector3(0, 0, 0)), moveTo(cubeB, new Vector3(0, 0, 0)))

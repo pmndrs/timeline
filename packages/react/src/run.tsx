@@ -3,7 +3,7 @@ import { RootState, useFrame } from '@react-three/fiber'
 import { ReactNode, useEffect, useMemo, useRef } from 'react'
 import { AttachableProvider } from './attachable.js'
 
-export function useRunTimeline<T extends ReusableTimeline<RootState, any>>(timeline: T, deps: Array<any>) {
+export function useRunTimeline(timeline: ReusableTimeline<RootState, unknown>, deps: Array<any>) {
   const updateRef = useRef<(state: RootState, delta: number) => void>(null)
   useEffect(() => {
     const abortController = new SynchronousAbortController()

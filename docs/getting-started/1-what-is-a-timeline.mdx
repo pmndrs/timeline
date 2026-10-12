@@ -4,7 +4,7 @@ description: Learn the core concepts—actions, updates, until, orchestration, a
 nav: 1
 ---
 
-Timelines let you write 3D behaviors like a story using async generator functions. You yield actions, wait for conditions, and compose sequences, loops, and parallel flows in a readable way.
+Timelines let you write 3D behaviors like a story using generator functions (`function*`). You yield actions, wait for conditions, and compose sequences, loops, and parallel flows in a readable way.
 
 At a high level, timelines are composed of actions and sub‑timelines. You chain them sequentially or run them in parallel to build rich behaviors.
 
@@ -12,9 +12,9 @@ At a high level, timelines are composed of actions and sub‑timelines. You chai
 
 An action is a unit of work you `yield*` from a timeline. It can:
 
-- provide an `init` function that runs once before the first update (can be sync or async; updates are deferred until it resolves). Return a cleanup function to run on abort.
+- provide an `init` function that runs once before the first update (can be sync or async; updates are deferred until a returned promise resolves). Return a cleanup function to run when the action ends or is canceled.
 - provide an `update(state, clock)` called every frame; return `false` to finish
-- provide an `until` promise to decide when it finishes
+- provide an `until` condition or promise to decide when it finishes
 - or any combination of the above
 
 Use an action when you want to perform work over time, wait for something to happen, or both.
@@ -37,16 +37,15 @@ yield *
 yield * action({ until: timePassed(1, 'seconds') })
 ```
 
+`until` accepts either
+
+- a synchronous condition `(state, clock, actionTime) => boolean`, checked at the start of every frame (`timePassed`, `forever` and `queue.waitUntilNotEmpty()` return one), or
+- a promise for external events (`mediaFinished`, `animationFinished`, a click, a network request).
+
+Timelines only advance inside the per-frame `update` call, so everything is stepped by frames and simulation time: `timePassed` counts the sum of frame deltas, not wall clock time. A promise is noticed on the next frame after it resolves (at most one frame of latency), so prefer conditions for sequencing that happens inside your simulation and promises for events from the outside world.
+
 > [!IMPORTANT]
-> Never use `await ...` inside timelines. Awaiting a promise pauses the generator in a way that cannot be canceled by the timeline runtime. Instead, wrap waits in an action and `yield*` it so cancellation can propagate correctly.
->
-> Bad:
->
-> ```ts
-> await someAsyncThing()
-> ```
->
-> Good:
+> Timelines are synchronous generators, so `await` is not available inside them. Wrap waits in an action and `yield*` it:
 >
 > ```ts
 > yield* action({ until: someAsyncThing() })
@@ -57,9 +56,11 @@ yield * action({ until: timePassed(1, 'seconds') })
 An action runs until either:
 
 - its `update` returns `false`, or
-- its `until` promise resolves.
+- its `until` condition is met or its `until` promise resolved.
 
-If both are provided, the action keeps updating until the `until` resolves.
+If both are provided, the action keeps updating until the `until` is met.
+
+When an action finishes, the timeline immediately continues to its next action within the same frame. The next action receives its first update in that same frame only if the finished action did not use it (its `until` was already met at the start of the frame); otherwise it starts updating on the next frame. Three actions whose `update` returns `false` therefore run on three consecutive frames.
 
 #### The action clock
 
@@ -71,14 +72,14 @@ The `clock` passed to `update(state, clock)` contains:
 
 ### Timelines
 
-A timeline is an async generator that yields actions (and can yield other timelines). You can loop, wait, and branch—writing behavior like a story.
+A timeline is a generator that yields actions (and can yield other timelines). You can loop, wait, and branch—writing behavior like a story.
 
 #### Reusable timelines
 
 A reusable timeline is a function that returns a timeline so it can be started many times.
 
 ```ts
-async function* reusableFadeIn() {
+function* reusableFadeIn() {
   yield* action({ until: timePassed(0.5, 'seconds') })
 }
 
@@ -131,7 +132,7 @@ Timelines compose: you can `yield*` another reusable timeline anywhere. This kee
 
 ```ts
 // Reusable timeline
-async function* someReusableTimeline() {
+function* someReusableTimeline() {
   yield* action({ until: timePassed(0.5, 'seconds') })
 }
 
@@ -147,7 +148,7 @@ Model behaviors as named states and transitions. `graph(initial, stateMap)` driv
 yield* graph('Idle', {
   Idle: {
     timeline: () => action({ update: ... }),
-    transitionTo: { Run: { whenPromise: () => timePassed(1, "seconds") } }
+    transitionTo: { Run: { whenUpdate: timePassed(1, 'seconds') } }
   },
   Run: {/* ... */},
 })
@@ -161,7 +162,7 @@ Use a queue to sequence reusable timelines that are added dynamically. The queue
 const queue = new TimelineQueue()
 
 // Manager timeline: repeatedly drain the queue, then wait for new work
-async function* queueManager() {
+function* queueManager() {
   while (true) {
     // runs each enqueued timeline sequentially until the queue is empty
     yield* queue.run()
@@ -171,12 +172,12 @@ async function* queueManager() {
 }
 
 // Somewhere else: enqueue work
-queue.add(async function* () {
+queue.add(function* () {
   yield* action({ until: timePassed(0.5, 'seconds') })
 })
 
 // Insert at a specific position (e.g. front of the queue)
-queue.add(async function* () {
+queue.add(function* () {
   /* ... */
 }, 0)
 
@@ -184,9 +185,9 @@ queue.add(async function* () {
 queue.clear()
 ```
 
-- **add(timeline, index?)**: enqueue at optional index (default appends). If the queue was empty, any waiters from `waitUntilNotEmpty()` resolve.
-- **run()**: async generator that yields each enqueued timeline in FIFO order until empty.
-- **waitUntilNotEmpty()**: promise that resolves immediately if there are entries, or when the next item is added.
+- **add(timeline, index?)**: enqueue at optional index (default appends).
+- **run()**: generator that yields each enqueued timeline in FIFO order until empty.
+- **waitUntilNotEmpty()**: `until` condition that is met while the queue has entries.
 - **length**: current number of queued timelines.
 
 This is useful for input-driven behaviors (clicks, network events) where you want actions to play back-to-back without interleaving.
@@ -200,7 +201,7 @@ const machine = new TimelineGraph('Idle', {
   Idle: {
     timeline: () => action({ update: () => true }), // keep updating until a transition fires
     transitionTo: {
-      Run: { whenPromise: () => timePassed(1, 'seconds') },
+      Run: { whenUpdate: timePassed(1, 'seconds') },
     },
   },
   Run: {
@@ -224,14 +225,14 @@ machine.removeState('Attack')
 
 Transitions can be expressed with:
 
-- **whenUpdate(state, clock) => boolean**: transition when this returns true
-- **whenPromise: () => Promise**: transition when the promise resolves
+- **whenUpdate(state, clock, actionTime) => boolean**: transition when this returns true (e.g. `timePassed(1, 'seconds')`)
+- **whenPromise: () => Promise**: transition on the next frame after the promise resolved
 - **finally: 'StateName'**: default next state after the state's `timeline` completes
 
 A state's `timeline` may also return a state name to transition to:
 
 ```ts
-async function* Run() {
+function* Run() {
   // ... do work ...
   return 'Idle' // explicit next state
 }

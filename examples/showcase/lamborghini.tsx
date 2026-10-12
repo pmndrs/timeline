@@ -42,7 +42,7 @@ export function Lamborghini(props: any) {
   useEffect(() => scene.traverse((object) => (object.castShadow = true)), [scene])
   const camera = useThree((s) => s.camera)
   useRunTimeline(
-    async function* () {
+    function* () {
       const wheels = ['RR', 'RL', 'FR', 'FL'].map((name) => scene.getObjectByName(name))
       const frontWheels = ['FR', 'FL'].map((name) => scene.getObjectByName(name))
       while (true) {
@@ -68,13 +68,13 @@ export function Lamborghini(props: any) {
         scene.position.z = -1000
         yield* parallel(
           'race',
-          async function* () {
+          function* () {
             yield* parallel(
               'race',
-              async function* () {
+              function* () {
                 yield* parallel(
                   'all',
-                  ...TextOpacities.map(async function* (opacity, i) {
+                  ...TextOpacities.map(function* (opacity, i) {
                     yield* action({ until: timePassed(i * 0.05, 'seconds') })
                     yield* action({
                       update: [
@@ -111,7 +111,7 @@ export function Lamborghini(props: any) {
           }),
         )
 
-        yield* doUntil(mediaFinished(audio), async function* () {
+        yield* doUntil(mediaFinished(audio), function* () {
           const position = new THREE.Vector3(
             Math.random() - 0.5,
             Math.random() * 0.6 - 0.1,

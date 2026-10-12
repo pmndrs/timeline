@@ -17,7 +17,7 @@ export class SequentialTimeline<T = unknown> extends Singleton<T> {
     this.timelines[index] = undefined
   }
 
-  protected async *unsafeRun(): NonReuseableTimeline<T> {
+  protected *unsafeRun(): NonReuseableTimeline<T> {
     let ranAnyTimeline = false
     for (const timeline of this.timelines) {
       if (timeline == null) {
