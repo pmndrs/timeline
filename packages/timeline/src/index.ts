@@ -3,6 +3,8 @@ export type TimelineClock = {
   prevDelta: number | undefined
   /**
    * index of the current update, starting at 0
+   * `runTimeline` increments it once per update; code that calls `TimelineRunner.step` with its own clock must do the same,
+   * otherwise finished motions (`transition`, `lookAt`, `offset*`) never hand their momentum to the next action
    */
   frame: number
 }

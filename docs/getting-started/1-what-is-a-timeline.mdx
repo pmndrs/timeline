@@ -64,12 +64,13 @@ When an action finishes, the timeline immediately continues to its next action w
 
 #### The action clock
 
-The `clock` passed to `update(state, clock)` contains:
+The `clock` passed to `update(state, clock, actionTime, memo)` contains:
 
-- `delta`: seconds since last frame (internally clamped to ~1/30s)
-- `prevDelta`: previous `delta` or `undefined` on the first frame (used by `spring`/`velocity` to infer velocity)
+- `delta`: seconds since the last frame, as passed to the update function returned by `runTimeline`
+- `prevDelta`: the previous `delta`, `0` on the first frame (used by `spring`/`velocity` to infer velocity)
 - `frame`: index of the current update, starting at 0 (lets a finished `transition`/`lookAt`/`offset*` hand its motion to the next action on the same target in the following frame)
-- `actionTime`: time since the current action started (resets between actions)
+
+The third argument, `actionTime`, is the time since the current action started (it resets between actions).
 
 ### Timelines
 

@@ -65,8 +65,9 @@ export class ParallelTimeline<T = unknown> extends Singleton<T> {
   }
 
   private isDone(runners: Map<ReusableTimeline<T>, TimelineRunner<T>>): boolean {
+    //an empty container idles until a timeline is attached
     if (runners.size === 0) {
-      return true
+      return false
     }
     for (const runner of runners.values()) {
       if (this.type === 'race' && runner.finished) {
@@ -83,7 +84,7 @@ export class ParallelTimeline<T = unknown> extends Singleton<T> {
 /**
  * function for executing multiple timelines in parallel
  * each timeline receives every frame in the given order; `false` entries are skipped
- * without any timelines, the parallel is done immediately and passes the frame on
+ * without any timelines (e.g. all entries are `false`), it returns immediately
  *
  * in a `"race"`, the first timeline that finishes ends the race before later timelines receive the frame;
  * put conditions (e.g. `action({ until })`) first so that a met condition hands the frame on to what follows the race
@@ -96,5 +97,8 @@ export function* parallel<T>(
   const reusables = timelines
     .filter((timeline) => typeof timeline != 'boolean')
     .map((timeline): ReusableTimeline<T> => (typeof timeline === 'function' ? timeline : () => timeline))
+  if (reusables.length === 0) {
+    return
+  }
   yield* new ParallelTimeline<T>(type, new Set(reusables)).run()
 }

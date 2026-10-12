@@ -137,6 +137,17 @@ describe('empty parallel', () => {
 })
 
 describe('ParallelTimeline.attach', () => {
+  it('idles while empty and runs a timeline attached later', () => {
+    const log: Array<string> = []
+    const parallelTimeline = new ParallelTimeline('all')
+    const update = runTimeline(parallelTimeline.run())
+    update({}, 1 / 60)
+    parallelTimeline.attach(() => action({ update: () => void log.push('child') }))
+    update({}, 1 / 60)
+    update({}, 1 / 60)
+    expect(log).toEqual(['child', 'child'])
+  })
+
   it('throws when attaching the same timeline twice', () => {
     const parallelTimeline = new ParallelTimeline('all')
     const timeline = () => action({})

@@ -7,45 +7,68 @@ nav: 3
 ## Action Update Ease
 
 ### spring
+
 action update ease function easing values according to spring physics
+
 #### Parameters
+
 - \`config\` (`{ damping: number; mass: number; maxVelocity?: number; stiffness: number }`): allows to configure the physical properties of the spring (available presets are `springPresets.gentle`, `springPresets.wobbly`, `springPresets.stiff`) - default is `springPresets.gentle`
+
 #### Returns
+
 `EaseFunction<unknown>`
 
 ### time
+
 action update easing function for a linear ease based on the provided duration in seconds
+
 #### Parameters
+
 - \`duration\` (number)
+
 #### Returns
+
 `EaseFunction<unknown>`
 
 ### velocity
+
 action update ease function for easing values according to the target velocity
+
 #### Parameters
+
 - \`velocity\` (number)
 - \`maxAcceleration\` (number): (optional) can be used to limit the change in velocity
+
 #### Returns
+
 `EaseFunction<unknown>`
 
 ## Action Update
 
 ### lookAt
+
 action update function for making a src object or quaternion look from its position towards the `toPosition`
+
 #### Parameters
+
 - \`from\` (`Object3D<Object3DEventMap> | { position: Vector3 | () => Vector3; rotation: Quaternion | (newValue?: Quaternion) => Quaternion }`)
 - \`toPosition\` (`Object3D<Object3DEventMap> | Vector3 | number[] | () => Vector3 | number[]`)
 - \`ease\` (`EaseFunction<T>`): allows to ease the rotation from the current state to the target position
 
 > [!NOTE]
 > World forward is −Z with up = `Object3D.DEFAULT_UP`. If source and target positions are identical.
+
 #### Returns
+
 `ActionUpdate<T>`
 
 ### offsetDistance
+
 action update function for making a src object or position move away/towards the to position to be at the specified distance
 combined with offsetRotation, this action update describes an exact target position in orbital coordinates
+
 #### Parameters
+
 - \`from\` (`Object3D<Object3DEventMap> | Vector3 | (newValue?: Vector3) => Vector3`)
 - \`to\` (`Object3D<Object3DEventMap> | Vector3 | () => Vector3`)
 - \`distance\` (number)
@@ -53,167 +76,258 @@ combined with offsetRotation, this action update describes an exact target posit
 
 > [!NOTE]
 > If `from` and `to` coincide (zero distance), direction is undefined; the action no‑ops and finishes.
+
 #### Returns
+
 `ActionUpdate<T>`
 
 ### offsetRotation
+
 action update function for making a src object or position move to a position with the specified rotation offset
 combined with offsetDistance, this action update describes an exact target position in orbital coordinates
+
 #### Parameters
+
 - \`from\` (`Object3D<Object3DEventMap> | Vector3 | (newValue?: Vector3) => Vector3`)
 - \`to\` (`Object3D<Object3DEventMap> | Vector3 | () => Vector3`)
 - \`rotation\` (`Quaternion | Euler | number[] | () => Quaternion | Euler | number[]`): the offset rotation in world space
 
 > [!NOTE]
 > Applies a world‑space rotation around `to` using a forward vector derived from the world up axis. Pair with `offsetDistance` to define orbital targets.
+
 - \`ease\` (`EaseFunction<T>`): allows to ease the position from the current state to the position with the target rotation offset
+
 #### Returns
+
 `ActionUpdate<T>`
 
 ### transition
+
 action update function for making a src object, position, rotation, scale, number change towards the to value
+
 #### Parameters
+
 - \`from\` (`TransitionFrom | (newValue?: Vector3 | Quaternion) => number | TransitionFrom`)
 - \`to\` (`TransitionTo | () => TransitionTo`)
 - \`ease\` (`EaseFunction<T>`): allows to ease the value from the current value to the target value
+
 #### Returns
+
 `ActionUpdate<T>`
 
 ## Action Until
 
 ### animationFinished
+
 action until function for executing an action until a animation has finished playing
+
 #### Parameters
+
 - \`animation\` (AnimationAction)
+
 #### Returns
+
 `Promise<void>`
 
 ### forever
+
 action until condition for executing an action until forever
+
 #### Returns
+
 `UntilCondition<unknown>`
 
 ### mediaFinished
+
 action until function for executing an action until a html media has finished playing
+
 #### Parameters
+
 - \`media\` (`HTMLAudioElement | HTMLVideoElement`)
+
 #### Returns
+
 `Promise<unknown>`
 
 ### promiseConcat
+
 action until function for concatenating multiple action until functions
+
 #### Parameters
+
 - \`promises\` (`Promise<unknown>[]`)
+
 #### Returns
+
 `Promise<void>`
 
 ### timePassed
+
 action until condition for executing an action until a certain amount of simulation time (the sum of frame deltas) has passed
+
 #### Parameters
+
 - \`time\` (number)
 - \`unit\` (`"seconds" | "milliseconds"`)
+
 #### Returns
+
 `UntilCondition<unknown>`
 
 ## Structural
 
 ### abortable
+
 a timeline wrapper that allows to make any timeline externally cancelable via an abort signal
 aborting cancels the wrapped timeline immediately; the wrapper finishes on the next frame without using it
+
 #### Parameters
+
 - \`timeline\` (`Timeline<T>`)
 - \`abortSignal\` (AbortSignal)
+
 #### Returns
+
 `NonReuseableTimeline<T>`
 
 ### action
+
 core function for yielding an action used via `yield* action({...})`
 allows to run this action `until` a certain event and execute an `update` function until the action is finished
+
 #### Parameters
+
 - \`params\` (`ActionParams<T>`)
+
 #### Returns
+
 `NonReuseableTimeline<T>`
 
 ### doUntil
+
 function for generating a timeline that repeats the inner timeline until the `until` condition or promise is met
+
 #### Parameters
+
 - \`until\` (`Until<T>`)
 - \`timeline\` (`ReusableTimeline<T>`)
+
 #### Returns
+
 `NonReuseableTimeline<T>`
 
 ### doWhile
+
 function for generating a timeline that repeats the inner timeline while the condition holds
 the condition is checked at the start of every frame; once it fails, the frame passes on to what follows
+
 #### Parameters
+
 - \`condition\` (`UntilCondition<T>`)
 - \`timeline\` (`ReusableTimeline<T>`)
+
 #### Returns
+
 `NonReuseableTimeline<T>`
 
 ### graph
+
 timeline function for building a state graph with transitions as edges
+
 #### Parameters
+
 - \`enterStateName\` (string): is the name of the initial state
 - \`stateMap\` (`GraphTimelineStateMap<T>`): is the map of states including their transitions to other states
 - \`exitStateName\` (string)
+
 #### Returns
+
 `NonReuseableTimeline<T>`
 
 ### parallel
+
 function for executing multiple timelines in parallel
 each timeline receives every frame in the given order; `false` entries are skipped
-without any timelines, the parallel is done immediately and passes the frame on
+without any timelines (e.g. all entries are `false`), it returns immediately
 
 in a `"race"`, the first timeline that finishes ends the race before later timelines receive the frame;
 put conditions (e.g. `action({ until })`) first so that a met condition hands the frame on to what follows the race
+
 #### Parameters
+
 - \`type\` (`"all" | "race"`): when to stop all timelines - either wait for `"all"` or cancel all timelines once the first timeline is done via `"race"`
 - \`timelines\` (`(boolean | Timeline<T>)[]`)
+
 #### Returns
+
 `NonReuseableTimeline<T>`
 
 ### runTimeline
+
 function for starting a timeline
 the timeline advances only inside the returned update function; errors thrown by the timeline propagate out of it
+
 #### Parameters
+
 - \`timeline\` (`Timeline<T, unknown>`)
 - \`abortSignal\` (AbortSignal)
+
 #### Returns
+
 `Update<T>`
 
 ## Misc
 
 ### property
+
 helper function for building a write/read function of any property in an object
+
 #### Parameters
+
 - \`object\` (`{ [Key in string]: number }`): the object from which to read/write a property
 - \`key\` (K): the key of the property from which to read/write inside of the object
+
 #### Returns
+
 `(newValue?: Vector3 | Quaternion) => number`
 
 ### scope
+
 allows to bind a resource to the lifetime of the scope regardless if the scope has finished or if it was cancelled
+
 #### Parameters
+
 - \`timeline\` (`(abortSignal: AbortSignal) => NonReuseableTimeline<T>`)
+
 #### Returns
+
 `NonReuseableTimeline<T>`
 
 ### useRunTimeline
+
 hook for running the specified timeline every frame
 errors thrown by the timeline propagate out of the frame callback
+
 #### Parameters
+
 - \`timeline\` (`ReusableTimeline<RootState, unknown>`)
 - \`deps\` (`any[]`): tells the hook when to stop the previous timeline and restart the currently provided timeline
+
 #### Returns
+
 `void`
 
 ### worldSpace
+
 helper function for building a write/read function of the position/euler/quaternion/scale for an object in world space
 useful when combined with other action update functions such as lookAt
+
 #### Parameters
+
 - \`type\` (Type)
 - \`forObject\` (Object3D)
 - \`offset\` (`number[]`)
+
 #### Returns
+
 `(newValue?: any) => WorldSpaceResults[Type]`
