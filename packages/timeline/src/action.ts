@@ -29,7 +29,7 @@ type Cleanup = () => void
 export type ActionParams<T> = {
   /**
    * runs synchronously when the action starts; a returned cleanup runs when the action ends or is cancelled
-   * for async setup, wait first: `yield* action({ until: load() })`
+   * for async setup, wait first and keep the result: `yield* action({ until: load().then((value) => (model = value)) })`
    */
   readonly init?: () => Cleanup | void
   readonly update?: ActionUpdate<T> | Array<ActionUpdate<T>>
@@ -44,7 +44,7 @@ export function* action<T>(params: ActionParams<T>): NonReuseableTimeline<T> {
   const { init, update, until } = params
   const cleanup = init?.()
   if (cleanup != null && typeof cleanup !== 'function') {
-    throw new Error(`action init must be synchronous and return a cleanup function or nothing`)
+    throw new Error(`action init must return a cleanup function or nothing, got ${typeof cleanup}`)
   }
   const isDone = toCondition(until)
   const updates = update == null ? [] : Array.isArray(update) ? update : [update]

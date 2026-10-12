@@ -25,7 +25,7 @@ describe('action', () => {
   it('throws when init returns a promise', () => {
     //a function typed to return void may still return a promise
     const init: () => void = async () => {}
-    expect(() => runTimeline(action({ init }))).toThrow(/must be synchronous/)
+    expect(() => runTimeline(action({ init }))).toThrow(/must return a cleanup function or nothing, got object/)
   })
 
   it('passes the accumulated action time to update', () => {

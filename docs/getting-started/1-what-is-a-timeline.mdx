@@ -12,7 +12,7 @@ At a high level, timelines are composed of actions and sub‑timelines. You chai
 
 An action is a unit of work you `yield*` from a timeline. It can:
 
-- provide a synchronous `init` function that runs when the action starts. Return a cleanup function to run when the action ends or is canceled. For async setup, wait for it first: `yield* action({ until: load() })`.
+- provide a synchronous `init` function that runs when the action starts. Return a cleanup function to run when the action ends or is canceled. For async setup, wait for it first and keep the result: `yield* action({ until: load().then((value) => (model = value)) })`.
 - provide an `update(state, clock)` called every frame; return `false` to finish
 - provide an `until` condition or promise to decide when it finishes
 - or any combination of the above
