@@ -1,6 +1,6 @@
 export type TimelineClock = {
   delta: number
-  prevDelta: number | undefined
+  prevDelta: number
   /**
    * index of the current update, starting at 0
    * `runTimeline` increments it once per update; code that calls `TimelineRunner.step` with its own clock must do the same,

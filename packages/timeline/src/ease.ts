@@ -32,7 +32,7 @@ export function velocity(velocity: number, maxAcceleration?: number): EaseFuncti
         .premultiply(goal as Quaternion)
       quaternionToTangentSpace(offsetQuaternion, offsetTangent, clock.delta)
 
-      if (memo.velocityVector == null && prev != null && clock.prevDelta != null && clock.prevDelta > 0) {
+      if (memo.velocityVector == null && prev != null && clock.prevDelta > 0) {
         memo.velocityVector = new Vector3()
         prevOffsetQuaternion
           .copy(prev as Quaternion)
@@ -61,7 +61,7 @@ export function velocity(velocity: number, maxAcceleration?: number): EaseFuncti
     }
 
     offsetVector.subVectors(goal, current)
-    if (memo.velocityVector == null && prev != null && clock.prevDelta != null && clock.prevDelta > 0) {
+    if (memo.velocityVector == null && prev != null && clock.prevDelta > 0) {
       memo.velocityVector = new Vector3().subVectors(current, prev).divideScalar(clock.prevDelta)
     }
 
@@ -168,7 +168,7 @@ export function spring(
         .premultiply(goal as Quaternion)
       quaternionToTangentSpace(offsetQuaternion, offsetTangent, clock.delta)
 
-      if (memo.velocityVector == null && prev != null && clock.prevDelta != null && clock.prevDelta > 0) {
+      if (memo.velocityVector == null && prev != null && clock.prevDelta > 0) {
         memo.velocityVector = new Vector3()
         prevOffsetQuaternion
           .copy(prev as Quaternion)
@@ -200,7 +200,7 @@ export function spring(
     }
 
     offsetVector.subVectors(goal, current)
-    if (memo.velocityVector == null && prev != null && clock.prevDelta != null && clock.prevDelta > 0) {
+    if (memo.velocityVector == null && prev != null && clock.prevDelta > 0) {
       memo.velocityVector = new Vector3().subVectors(current, prev).divideScalar(clock.prevDelta)
     }
 
