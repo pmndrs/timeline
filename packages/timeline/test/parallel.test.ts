@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { oneTick } from './helpers.js'
-import { runTimeline, action, parallel, timePassed, doUntil } from '../src/index.js'
+import { runTimeline, action, parallel, timePassed, doUntil, doWhile, ParallelTimeline } from '../src/index.js'
 
 describe('parallel', () => {
   it('steps every timeline once per update', () => {
@@ -95,5 +95,52 @@ describe('errors in parallel timelines', () => {
     )
     expect(() => update({}, 1 / 60)).toThrow('boom')
     expect(cleaned).toBe(1)
+  })
+})
+
+describe('doWhile', () => {
+  it('hands the frame on once the condition fails', () => {
+    const log: Array<string> = []
+    let frame = 0
+    const logFrame = (name: string) =>
+      action({
+        update: () => {
+          log.push(`${name} ${frame}`)
+          return false
+        },
+      })
+    const update = runTimeline(function* () {
+      yield* doWhile(
+        () => frame < 2,
+        () => logFrame('body'),
+      )
+      yield* logFrame('after')
+    })
+    for (; frame < 4; frame++) {
+      update({}, 1 / 60)
+    }
+    expect(log).toEqual(['body 0', 'body 1', 'after 2'])
+  })
+})
+
+describe('empty parallel', () => {
+  it('is done immediately and hands the frame on', () => {
+    const log: Array<string> = []
+    const update = runTimeline(function* () {
+      yield* parallel('all', false, false)
+      yield* parallel('race')
+      yield* oneTick(log, 'after')
+    })
+    update({}, 1 / 60)
+    expect(log).toEqual(['after'])
+  })
+})
+
+describe('ParallelTimeline.attach', () => {
+  it('throws when attaching the same timeline twice', () => {
+    const parallelTimeline = new ParallelTimeline('all')
+    const timeline = () => action({})
+    parallelTimeline.attach(timeline)
+    expect(() => parallelTimeline.attach(timeline)).toThrow(/already attached/)
   })
 })

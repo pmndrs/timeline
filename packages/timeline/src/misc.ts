@@ -1,5 +1,5 @@
 import { Euler, Matrix4, Object3D, Quaternion, Vector3, type AnimationAction } from 'three'
-import { action, type ActionUpdate, type Until, type UntilCondition } from './action.js'
+import { action, type Until, type UntilCondition } from './action.js'
 import { parallel } from './parallel.js'
 import type { NonReuseableTimeline, ReusableTimeline } from './index.js'
 
@@ -18,7 +18,8 @@ export const TimelineFallbacks = {
  */
 export function timePassed(time: number, unit: 'seconds' | 'milliseconds'): UntilCondition<unknown> {
   const seconds = unit === 'seconds' ? time : time / 1000
-  return (_state, _clock, actionTime) => actionTime >= seconds
+  //tolerate floating point error from summing deltas (6 * 1/60 is slightly below 0.1)
+  return (_state, _clock, actionTime) => actionTime >= seconds - 1e-9
 }
 
 /**
@@ -75,13 +76,11 @@ export function* doUntil<T>(until: Until<T>, timeline: ReusableTimeline<T>): Non
 }
 
 /**
- * function for generating a timeline that executes the inner function while a update function returns true
+ * function for generating a timeline that repeats the inner timeline while the condition holds
+ * the condition is checked at the start of every frame; once it fails, the frame passes on to what follows
  */
-export function* doWhile<T>(
-  update: (...params: Parameters<ActionUpdate<T>>) => boolean,
-  timeline: ReusableTimeline<T>,
-): NonReuseableTimeline<T> {
-  yield* parallel('race', action({ update }), function* () {
+export function* doWhile<T>(condition: UntilCondition<T>, timeline: ReusableTimeline<T>): NonReuseableTimeline<T> {
+  yield* parallel('race', action({ until: (...params) => !condition(...params) }), function* () {
     while (true) {
       yield* timeline()
     }

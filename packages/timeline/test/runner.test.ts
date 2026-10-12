@@ -74,7 +74,7 @@ describe('runTimeline', () => {
           },
         })
       } catch (error) {
-        log.push((error as Error).message)
+        log.push(error instanceof Error ? error.message : 'unexpected error type')
       }
       yield* oneTick(log, 'B')
     })

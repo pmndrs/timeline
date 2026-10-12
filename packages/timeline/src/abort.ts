@@ -23,37 +23,6 @@ export class SynchronousAbortSignal extends EventTarget implements AbortSignal {
       throw this.reason instanceof Error ? this.reason : new DOMException('The operation was aborted.', 'AbortError')
     }
   }
-
-  /**
-   * Returns a signal that aborts when *any* of the given signals abort.
-   * Works with both standard and synchronous signals.
-   */
-  static any(signals: AbortSignal[]): AbortSignal {
-    const controller = new SynchronousAbortController()
-
-    for (const signal of signals) {
-      if (signal.aborted) {
-        controller.abort(signal.reason)
-        return controller.signal
-      }
-    }
-
-    // Each listener captures its own signal (rather than reading event.currentTarget, which can be
-    // null under re-entrant synchronous dispatch) and is removed via the cleanup signal once any fires.
-    const cleanup = new AbortController()
-    for (const signal of signals) {
-      signal.addEventListener(
-        'abort',
-        () => {
-          controller.abort(signal.reason)
-          cleanup.abort()
-        },
-        { signal: cleanup.signal },
-      )
-    }
-
-    return controller.signal
-  }
 }
 
 export class SynchronousAbortController {

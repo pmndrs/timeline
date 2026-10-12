@@ -1,7 +1,6 @@
 export * from '@pmndrs/timeline'
 export * from './action.js'
 export * from './attachable.js'
-export * from './deprecated.js'
 export * from './graph.js'
 export * from './loop.js'
 export * from './parallel.js'

@@ -130,7 +130,7 @@ aborting cancels the wrapped timeline immediately; the wrapper finishes on the n
 core function for yielding an action used via `yield* action({...})`
 allows to run this action `until` a certain event and execute an `update` function until the action is finished
 #### Parameters
-- \`__namedParameters\` (`ActionParams<T>`)
+- \`params\` (`ActionParams<T>`)
 #### Returns
 `NonReuseableTimeline<T>`
 
@@ -143,9 +143,10 @@ function for generating a timeline that repeats the inner timeline until the `un
 `NonReuseableTimeline<T>`
 
 ### doWhile
-function for generating a timeline that executes the inner function while a update function returns true
+function for generating a timeline that repeats the inner timeline while the condition holds
+the condition is checked at the start of every frame; once it fails, the frame passes on to what follows
 #### Parameters
-- \`update\` (`(params: [state: T, clock: TimelineClock, actionTime: number, memo: Record<string, any>]) => boolean`)
+- \`condition\` (`UntilCondition<T>`)
 - \`timeline\` (`ReusableTimeline<T>`)
 #### Returns
 `NonReuseableTimeline<T>`
@@ -161,14 +162,18 @@ timeline function for building a state graph with transitions as edges
 
 ### parallel
 function for executing multiple timelines in parallel
-each timeline receives every frame; `false` entries are skipped
+each timeline receives every frame in the given order; `false` entries are skipped
+without any timelines, the parallel is done immediately and passes the frame on
+
+in a `"race"`, the first timeline that finishes ends the race before later timelines receive the frame;
+put conditions (e.g. `action({ until })`) first so that a met condition hands the frame on to what follows the race
 #### Parameters
 - \`type\` (`"all" | "race"`): when to stop all timelines - either wait for `"all"` or cancel all timelines once the first timeline is done via `"race"`
 - \`timelines\` (`(boolean | Timeline<T>)[]`)
 #### Returns
 `NonReuseableTimeline<T>`
 
-### start
+### runTimeline
 function for starting a timeline
 the timeline advances only inside the returned update function; errors thrown by the timeline propagate out of it
 #### Parameters
@@ -187,15 +192,6 @@ helper function for building a write/read function of any property in an object
 #### Returns
 `(newValue?: Vector3 | Quaternion) => number`
 
-### runTimeline
-function for starting a timeline
-the timeline advances only inside the returned update function; errors thrown by the timeline propagate out of it
-#### Parameters
-- \`timeline\` (`Timeline<T, unknown>`)
-- \`abortSignal\` (AbortSignal)
-#### Returns
-`Update<T>`
-
 ### scope
 allows to bind a resource to the lifetime of the scope regardless if the scope has finished or if it was cancelled
 #### Parameters
@@ -203,18 +199,12 @@ allows to bind a resource to the lifetime of the scope regardless if the scope h
 #### Returns
 `NonReuseableTimeline<T>`
 
-### useTimeline
+### useRunTimeline
+hook for running the specified timeline every frame
+errors thrown by the timeline propagate out of the frame callback
 #### Parameters
 - \`timeline\` (`ReusableTimeline<RootState, unknown>`)
-- \`deps\` (`any[]`)
-#### Returns
-`void`
-
-### useTimelineGraph
-#### Parameters
-- \`initialStateName\` (string)
-- \`stateMap\` (`GraphTimelineStateMap<RootState>`)
-- \`deps\` (`any[]`)
+- \`deps\` (`any[]`): tells the hook when to stop the previous timeline and restart the currently provided timeline
 #### Returns
 `void`
 

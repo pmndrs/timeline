@@ -1,19 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { oneTick } from './helpers.js'
+import { describe, it, expect, vi } from 'vitest'
+import { deferred, nextMacrotask, oneTick } from './helpers.js'
 import { runTimeline, action, parallel, timePassed } from '../src/index.js'
-
-function deferred() {
-  let resolve!: () => void
-  const promise = new Promise<void>((r) => (resolve = r))
-  return { promise, resolve }
-}
-
-/**
- * lets promise reactions run, as the event loop does between two frames
- */
-function nextMacrotask() {
-  return new Promise((resolve) => setTimeout(resolve))
-}
 
 describe('action', () => {
   it('calls cleanup when update returns false', () => {
@@ -43,6 +30,21 @@ describe('action', () => {
     }
     //4 frames of 0.25s wait, the 5th frame passes on to the next action
     expect(log).toEqual(['wait', 'wait', 'wait', 'wait', 'next'])
+  })
+
+  it('tolerates floating point error when summing deltas', () => {
+    const log: Array<string> = []
+    const update = runTimeline(function* () {
+      yield* action({ until: timePassed(0.1, 'seconds') })
+      yield* oneTick(log, 'next')
+    })
+    //6 * 1/60 sums to 0.09999999999999999
+    for (let i = 0; i < 6; i++) {
+      update({}, 1 / 60)
+    }
+    expect(log).toEqual([])
+    update({}, 1 / 60)
+    expect(log).toEqual(['next'])
   })
 
   it('accepts timePassed in milliseconds', () => {
@@ -112,8 +114,7 @@ describe('action', () => {
 describe('action cancelled before its async init resolved', () => {
   it('runs the cleanup once the init resolves', async () => {
     let cleaned = 0
-    let resolve!: () => void
-    const promise = new Promise<void>((r) => (resolve = r))
+    const { promise, resolve } = deferred()
     const update = runTimeline(
       parallel(
         'race',
@@ -126,5 +127,18 @@ describe('action cancelled before its async init resolved', () => {
     resolve()
     await nextMacrotask()
     expect(cleaned).toBe(1)
+  })
+
+  it('reports an async init rejection that nothing waits for anymore', async () => {
+    const errors: Array<unknown> = []
+    const spy = vi.spyOn(console, 'error').mockImplementation((error) => errors.push(error))
+    const { promise, reject } = deferred()
+    const update = runTimeline(parallel('race', action({ init: () => promise }), action({ update: () => false })))
+    update({}, 1 / 60)
+    const error = new Error('init failed')
+    reject(error)
+    await nextMacrotask()
+    spy.mockRestore()
+    expect(errors).toEqual([error])
   })
 })

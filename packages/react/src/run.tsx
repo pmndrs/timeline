@@ -3,6 +3,11 @@ import { RootState, useFrame } from '@react-three/fiber'
 import { ReactNode, useEffect, useMemo, useRef } from 'react'
 import { AttachableProvider } from './attachable.js'
 
+/**
+ * hook for running the specified timeline every frame
+ * errors thrown by the timeline propagate out of the frame callback
+ * @param deps tells the hook when to stop the previous timeline and restart the currently provided timeline
+ */
 export function useRunTimeline(timeline: ReusableTimeline<RootState, unknown>, deps: Array<any>) {
   const updateRef = useRef<(state: RootState, delta: number) => void>(null)
   useEffect(() => {

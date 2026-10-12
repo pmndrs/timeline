@@ -65,7 +65,7 @@ export function lookAt<T>(
 
     write(target, from.rotation)
     if (shouldContinue === false) {
-      setPrevious(from.rotation, 'lookAt', memo.prev)
+      setPrevious(from.rotation, 'lookAt', memo.prev, clock)
     }
     return shouldContinue
   }

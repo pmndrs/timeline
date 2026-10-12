@@ -1,14 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { oneTick } from './helpers.js'
-import {
-  runTimeline,
-  action,
-  abortable,
-  parallel,
-  timePassed,
-  SynchronousAbortController,
-  SynchronousAbortSignal,
-} from '../src/index.js'
+import { runTimeline, action, abortable, parallel, timePassed, SynchronousAbortController } from '../src/index.js'
 
 describe('aborting a running timeline', () => {
   it('cancels a running nested parallel("race") timeline', () => {
@@ -47,31 +39,5 @@ describe('aborting a running timeline', () => {
     expect(log).toEqual(['cleanup'])
     update({}, 1 / 60)
     expect(log).toEqual(['cleanup', 'next'])
-  })
-})
-
-describe('SynchronousAbortSignal.any', () => {
-  it('adopts the reason of whichever signal aborts', () => {
-    const a = new SynchronousAbortController()
-    const b = new SynchronousAbortController()
-    const combined = SynchronousAbortSignal.any([a.signal, b.signal])
-
-    b.abort('stop-b')
-
-    expect(combined.aborted).toBe(true)
-    expect(combined.reason).toBe('stop-b')
-  })
-
-  it('propagates through chained combinators', () => {
-    const external = new SynchronousAbortController()
-    const internal = new SynchronousAbortController()
-    const first = SynchronousAbortSignal.any([internal.signal, external.signal])
-    const second = SynchronousAbortSignal.any([first, new SynchronousAbortController().signal])
-
-    external.abort('teardown')
-
-    expect(first.aborted).toBe(true)
-    expect(second.aborted).toBe(true)
-    expect(second.reason).toBe('teardown')
   })
 })

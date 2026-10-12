@@ -40,7 +40,8 @@ export type ActionParams<T> = {
  * core function for yielding an action used via `yield* action({...})`
  * allows to run this action `until` a certain event and execute an `update` function until the action is finished
  */
-export function* action<T>({ init, update, until }: ActionParams<T>): NonReuseableTimeline<T> {
+export function* action<T>(params: ActionParams<T>): NonReuseableTimeline<T> {
+  const { init, update, until } = params
   const initialized = initialize(init)
   const isDone = toCondition(until)
   const updates = update == null ? [] : Array.isArray(update) ? update : [update]
@@ -78,13 +79,22 @@ function initialize(init: ActionParams<unknown>['init']): { isReady: () => boole
   let ended = false
   let cleanup: Cleanup | void
   const isReady = observe(
-    result.then((value) => {
-      cleanup = value
-      //the action ended before its init resolved
-      if (ended) {
-        value?.()
-      }
-    }),
+    result.then(
+      (value) => {
+        cleanup = value
+        //the action ended before its init resolved
+        if (ended) {
+          value?.()
+        }
+      },
+      (error: unknown) => {
+        //nothing polls the init of an ended action anymore
+        if (ended) {
+          console.error(error)
+        }
+        throw error
+      },
+    ),
   )
   return {
     isReady,

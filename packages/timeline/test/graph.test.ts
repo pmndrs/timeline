@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { oneTick } from './helpers.js'
+import { deferred, nextMacrotask, oneTick } from './helpers.js'
 import { runTimeline, action, graph, GraphTimeline, switch_, QueueTimeline, timePassed } from '../src/index.js'
 
 describe('graph', () => {
@@ -25,17 +25,32 @@ describe('graph', () => {
       ),
     )
     update({}, 1 / 60)
+    expect(log).toEqual(['a'])
     go = true
-    //the transition is checked before the state's timeline, so "a" does not run in this frame
-    update({}, 1 / 60)
-    update({}, 1 / 60)
+    //the met transition hands this frame on to "b"
     update({}, 1 / 60)
     expect(log).toEqual(['a', 'b'])
   })
 
+  it('runs a state for exactly the time of a whenUpdate timePassed transition', () => {
+    const log: Array<string> = []
+    const update = runTimeline(
+      graph('a', {
+        a: {
+          timeline: () => action({ update: () => void log.push('a') }),
+          transitionTo: { b: { whenUpdate: timePassed(1, 'seconds') } },
+        },
+        b: { timeline: () => action({ update: () => void log.push('b') }) },
+      }),
+    )
+    for (let i = 0; i < 5; i++) {
+      update({}, 0.25)
+    }
+    expect(log).toEqual(['a', 'a', 'a', 'a', 'b'])
+  })
+
   it('transitions with whenPromise on the next update after it resolved', async () => {
-    let resolve!: () => void
-    const promise = new Promise<void>((r) => (resolve = r))
+    const { promise, resolve } = deferred()
     const graphTimeline = new GraphTimeline('a', {
       a: { timeline: () => action({}), transitionTo: { b: { whenPromise: () => promise } } },
       b: { timeline: () => action({}) },
@@ -43,7 +58,7 @@ describe('graph', () => {
     const update = runTimeline(graphTimeline.run())
     update({}, 1 / 60)
     resolve()
-    await promise
+    await nextMacrotask()
     expect(graphTimeline.getState()).toBe('a')
     update({}, 1 / 60)
     expect(graphTimeline.getState()).toBe('b')

@@ -126,15 +126,11 @@ export function runTimeline<T>(timeline: Timeline<T, unknown>, abortSignal?: Abo
   }
   const runner = new TimelineRunner(timeline)
   abortSignal?.addEventListener('abort', () => runner.cancel(), { once: true })
-  const clock: TimelineClock = { delta: 0, prevDelta: 0 }
+  const clock: TimelineClock = { delta: 0, prevDelta: 0, frame: 0 }
   return (state, delta) => {
     clock.delta = delta
     runner.step(state, clock)
     clock.prevDelta = delta
+    clock.frame++
   }
 }
-
-/**
- * @deprecated use `runTimeline` instead
- */
-export const start = runTimeline

@@ -1,4 +1,4 @@
-import { action, type ActionUpdate } from './action.js'
+import { action, type UntilCondition } from './action.js'
 import { forever, TimelineFallbacks } from './misc.js'
 import { parallel } from './parallel.js'
 import { ReplacableTimeline } from './replaceable.js'
@@ -7,17 +7,13 @@ import type { NonReuseableTimeline, ReusableTimeline } from './index.js'
 
 export type GraphTimelineStateTransition<T = unknown> = {
   /**
-   * @deprecated use `whenUpdate` instead
-   */
-  when?: (...params: Parameters<ActionUpdate<T>>) => boolean
-  /**
    * transition once the promise resolves; observed on the next frame at the earliest
    */
   whenPromise?: () => Promise<unknown>
   /**
-   * transition once this returns true; evaluated every frame
+   * transition once this returns true; checked at the start of every frame, so the next state receives that frame
    */
-  whenUpdate?: (...params: Parameters<ActionUpdate<T>>) => boolean
+  whenUpdate?: UntilCondition<T>
 }
 
 export type GraphTimelineStateTransitions<T = unknown> =
@@ -68,12 +64,10 @@ export class GraphTimeline<T = unknown> extends Singleton<T> {
         transitions = Object.entries<GraphTimelineStateTransition<T> | string | (() => string)>(transitionTo)
           .filter((entry): entry is [string, GraphTimelineStateTransition<T>] => typeof entry[1] === 'object')
           .map(function* ([name, condition]): NonReuseableTimeline<T> {
-            const whenUpdate = condition.whenUpdate ?? condition.when
-            const whenPromise = condition.whenPromise
-            if (whenUpdate != null) {
-              yield* action({ update: (...params) => !whenUpdate(...params) })
-            } else if (whenPromise != null) {
-              yield* action({ until: whenPromise() })
+            if (condition.whenUpdate != null) {
+              yield* action({ until: condition.whenUpdate })
+            } else if (condition.whenPromise != null) {
+              yield* action({ until: condition.whenPromise() })
             } else {
               throw new Error(`transitions need either a whenPromise or whenUpdate condition`)
             }

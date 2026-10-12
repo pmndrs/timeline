@@ -22,7 +22,7 @@ In the following example, you can move the mouse to the left or right of the can
     '/App.tsx': `import { Canvas, useThree } from '@react-three/fiber'
 import { useRef } from 'react'
 import { Mesh } from 'three'
-import { useTimelineGraph, action, lookAt, spring } from '@react-three/timeline'
+import { useRunTimeline, graph, action, lookAt, spring } from '@react-three/timeline'
 
 function mouseOnSide(side: 'left' | 'right'): Promise<void> {
 return new Promise((resolve) => {
@@ -42,9 +42,9 @@ const camera = useThree((s) => s.camera)
 const red = useRef<Mesh>(null)
 const blue = useRef<Mesh>(null)
 
-useTimelineGraph(
-'red',
-{
+useRunTimeline(
+() =>
+graph('red', {
 red: {
 timeline: () => action({ update: lookAt(camera, red.current!, spring()) }),
 transitionTo: { blue: { whenPromise: () => mouseOnSide('right') } },
@@ -53,7 +53,7 @@ blue: {
 timeline: () => action({ update: lookAt(camera, blue.current!, spring()) }),
 transitionTo: { red: { whenPromise: () => mouseOnSide('left') } },
 },
-},
+}),
 [camera],
 )
 
@@ -118,21 +118,21 @@ function mouseOnSide(side: 'left' | 'right'): Promise<void> {
 }
 ```
 
-2. Start the graph with inline states (no separate variable) and render the scene. The state shape is inferred by `useTimelineGraph`.
+2. Start the graph with inline states (no separate variable) and render the scene. `graph` builds the state machine and `useRunTimeline` runs it.
 
 ```tsx
-useTimelineGraph(
-  'red',
-  {
-    red: {
-      timeline: () => action({ update: lookAt(camera, red.current!, spring()) }),
-      transitionTo: { blue: { whenPromise: () => mouseOnSide('right') } },
-    },
-    blue: {
-      timeline: () => action({ update: lookAt(camera, blue.current!, spring()) }),
-      transitionTo: { red: { whenPromise: () => mouseOnSide('left') } },
-    },
-  },
+useRunTimeline(
+  () =>
+    graph('red', {
+      red: {
+        timeline: () => action({ update: lookAt(camera, red.current!, spring()) }),
+        transitionTo: { blue: { whenPromise: () => mouseOnSide('right') } },
+      },
+      blue: {
+        timeline: () => action({ update: lookAt(camera, blue.current!, spring()) }),
+        transitionTo: { red: { whenPromise: () => mouseOnSide('left') } },
+      },
+    }),
   [camera],
 )
 ```

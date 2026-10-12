@@ -1,6 +1,10 @@
 export type TimelineClock = {
   delta: number
   prevDelta: number | undefined
+  /**
+   * index of the current update, starting at 0
+   */
+  frame: number
 }
 
 /**

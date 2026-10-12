@@ -35,7 +35,7 @@ export function offsetDistance<T>(
   const target = new Vector3()
 
   return (state, clock, _, memo: { prev?: Vector3; easeMemo?: Record<string, any> }) => {
-    if (memo.prev === null) {
+    if (memo.prev == null) {
       memo.prev = getPrevious(from, 'offsetDistance', clock) as Vector3 | undefined
     }
     read('position', from, fromPosition)
@@ -77,7 +77,7 @@ export function offsetDistance<T>(
     }
 
     if (shouldContinue === false) {
-      setPrevious(from, 'offsetDistance', memo.prev)
+      setPrevious(from, 'offsetDistance', memo.prev, clock)
     }
     return shouldContinue
   }
@@ -131,7 +131,7 @@ export function offsetRotation<T>(
     // derive goal quaternion from provided rotation
     read('rotation', rotation, goal)
 
-    if (memo.prev === null) {
+    if (memo.prev == null) {
       memo.prev = getPrevious(from, `offsetRotation`, clock) as Quaternion
     }
 
@@ -163,7 +163,7 @@ export function offsetRotation<T>(
     write(nextPosition, from)
 
     if (shouldContinue === false) {
-      setPrevious(from, `offsetRotation`, memo.prev)
+      setPrevious(from, `offsetRotation`, memo.prev, clock)
     }
     return shouldContinue
   }
