@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { oneTick } from './helpers.js'
-import { runTimeline, action, SynchronousAbortController } from '../src/index.js'
+import { runTimeline, action, abortable } from '../src/index.js'
 
 describe('runTimeline', () => {
   it('advances one-tick actions once per update in a synchronous loop', () => {
@@ -83,9 +83,9 @@ describe('runTimeline', () => {
     expect(log).toEqual(['boom', 'B'])
   })
 
-  it('runs cleanups synchronously when the abort signal aborts', () => {
+  it('runs cleanups before abort() of a native AbortController returns', () => {
     let cleaned = 0
-    const controller = new SynchronousAbortController()
+    const controller = new AbortController()
     const update = runTimeline(action({ init: () => () => cleaned++ }), controller.signal)
     update({}, 1 / 60)
     controller.abort()
@@ -96,7 +96,7 @@ describe('runTimeline', () => {
 
   it('cancels from inside an update', () => {
     const log: Array<string> = []
-    const controller = new SynchronousAbortController()
+    const controller = new AbortController()
     const update = runTimeline(function* () {
       try {
         yield* action({ update: () => controller.abort() })
@@ -112,7 +112,7 @@ describe('runTimeline', () => {
 
   it('cancels from inside the timeline once it reaches its next action', () => {
     const log: Array<string> = []
-    const controller = new SynchronousAbortController()
+    const controller = new AbortController()
     const update = runTimeline(function* () {
       try {
         yield* oneTick(log, 'A')
@@ -126,5 +126,27 @@ describe('runTimeline', () => {
     update({}, 1 / 60)
     update({}, 1 / 60)
     expect(log).toEqual(['A', 'after abort', 'finally'])
+  })
+
+  it('does not start a timeline whose signal already aborted', () => {
+    let started = false
+    const controller = new AbortController()
+    controller.abort()
+    runTimeline(action({ init: () => void (started = true) }), controller.signal)
+    expect(started).toBe(false)
+  })
+
+  it('abortable cancels the inner timeline immediately and continues on the next update', () => {
+    const log: Array<string> = []
+    const controller = new AbortController()
+    const update = runTimeline(function* () {
+      yield* abortable(action({ init: () => () => void log.push('cleanup') }), controller.signal)
+      yield* oneTick(log, 'next')
+    })
+    update({}, 1 / 60)
+    controller.abort()
+    expect(log).toEqual(['cleanup'])
+    update({}, 1 / 60)
+    expect(log).toEqual(['cleanup', 'next'])
   })
 })

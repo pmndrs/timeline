@@ -1,4 +1,4 @@
-import { ReplacableTimeline, ReusableTimeline, runTimeline, SynchronousAbortController } from '@pmndrs/timeline'
+import { ReplacableTimeline, ReusableTimeline, runTimeline } from '@pmndrs/timeline'
 import { RootState, useFrame } from '@react-three/fiber'
 import { ReactNode, useEffect, useMemo, useRef } from 'react'
 import { AttachableProvider } from './attachable.js'
@@ -11,7 +11,7 @@ import { AttachableProvider } from './attachable.js'
 export function useRunTimeline(timeline: ReusableTimeline<RootState, unknown>, deps: Array<any>) {
   const updateRef = useRef<(state: RootState, delta: number) => void>(null)
   useEffect(() => {
-    const abortController = new SynchronousAbortController()
+    const abortController = new AbortController()
     const update = runTimeline(timeline(), abortController.signal)
     updateRef.current = update
     return () => {

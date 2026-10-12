@@ -28,10 +28,10 @@ type Cleanup = () => void
 
 export type ActionParams<T> = {
   /**
-   * runs once before the first update; a returned cleanup runs when the action ends
-   * a returned promise delays the first update until it resolves
+   * runs synchronously when the action starts; a returned cleanup runs when the action ends or is cancelled
+   * for async setup, wait first: `yield* action({ until: load() })`
    */
-  readonly init?: () => Cleanup | Promise<Cleanup | void> | undefined | void
+  readonly init?: () => Cleanup | void
   readonly update?: ActionUpdate<T> | Array<ActionUpdate<T>>
   readonly until?: Until<T>
 }
@@ -42,16 +42,16 @@ export type ActionParams<T> = {
  */
 export function* action<T>(params: ActionParams<T>): NonReuseableTimeline<T> {
   const { init, update, until } = params
-  const initialized = initialize(init)
+  const cleanup = init?.()
+  if (cleanup != null && typeof cleanup !== 'function') {
+    throw new Error(`action init must be synchronous and return a cleanup function or nothing`)
+  }
   const isDone = toCondition(until)
   const updates = update == null ? [] : Array.isArray(update) ? update : [update]
   const memos = updates.map(() => ({}))
   let actionTime = 0
   try {
     yield (state, clock) => {
-      if (!initialized.isReady()) {
-        return 'running'
-      }
       if (isDone(state, clock, actionTime)) {
         return 'skipped'
       }
@@ -67,41 +67,7 @@ export function* action<T>(params: ActionParams<T>): NonReuseableTimeline<T> {
       return shouldContinue === false ? 'finished' : 'running'
     }
   } finally {
-    initialized.cleanup()
-  }
-}
-
-function initialize(init: ActionParams<unknown>['init']): { isReady: () => boolean; cleanup: Cleanup } {
-  const result = init?.()
-  if (result == null || typeof result === 'function') {
-    return { isReady: () => true, cleanup: () => result?.() }
-  }
-  let ended = false
-  let cleanup: Cleanup | void
-  const isReady = observe(
-    result.then(
-      (value) => {
-        cleanup = value
-        //the action ended before its init resolved
-        if (ended) {
-          value?.()
-        }
-      },
-      (error: unknown) => {
-        //nothing polls the init of an ended action anymore
-        if (ended) {
-          console.error(error)
-        }
-        throw error
-      },
-    ),
-  )
-  return {
-    isReady,
-    cleanup: () => {
-      ended = true
-      cleanup?.()
-    },
+    cleanup?.()
   }
 }
 

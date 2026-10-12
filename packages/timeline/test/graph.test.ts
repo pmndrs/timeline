@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { deferred, nextMacrotask, oneTick } from './helpers.js'
+import { deferred, oneTick } from './helpers.js'
 import { runTimeline, action, graph, GraphTimeline, switch_, QueueTimeline, timePassed } from '../src/index.js'
 
 describe('graph', () => {
@@ -58,7 +58,7 @@ describe('graph', () => {
     const update = runTimeline(graphTimeline.run())
     update({}, 1 / 60)
     resolve()
-    await nextMacrotask()
+    await promise
     expect(graphTimeline.getState()).toBe('a')
     update({}, 1 / 60)
     expect(graphTimeline.getState()).toBe('b')

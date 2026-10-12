@@ -30,7 +30,6 @@ export type NonReuseableTimeline<T = unknown, R = void> = Generator<TimelineYiel
 
 export type Update<T> = (state: T, delta: number) => void
 
-export * from './abort.js'
 export * from './runner.js'
 export * from './misc.js'
 export * from './graph.js'
@@ -43,7 +42,6 @@ export * from './previous.js'
 export * from './parallel.js'
 export * from './queue.js'
 export * from './action.js'
-export * from './scope.js'
 export * from './abortable.js'
 export * from './sequential.js'
 export * from './singleton.js'

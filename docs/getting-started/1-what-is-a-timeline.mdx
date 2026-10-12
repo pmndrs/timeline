@@ -12,7 +12,7 @@ At a high level, timelines are composed of actions and sub‑timelines. You chai
 
 An action is a unit of work you `yield*` from a timeline. It can:
 
-- provide an `init` function that runs once before the first update (can be sync or async; updates are deferred until a returned promise resolves). Return a cleanup function to run when the action ends or is canceled.
+- provide a synchronous `init` function that runs when the action starts. Return a cleanup function to run when the action ends or is canceled. For async setup, wait for it first: `yield* action({ until: load() })`.
 - provide an `update(state, clock)` called every frame; return `false` to finish
 - provide an `until` condition or promise to decide when it finishes
 - or any combination of the above
@@ -140,6 +140,22 @@ function* someReusableTimeline() {
 
 // Compose inside another timeline
 yield * someReusableTimeline()
+```
+
+### Resources and cancellation
+
+When a timeline is canceled (a race is lost, a graph state is left, the abort signal passed to `runTimeline` aborts), its `finally` blocks run synchronously. Use `try`/`finally` to bind a resource to a timeline's lifetime:
+
+```ts
+function* withSound() {
+  const audio = new Audio('./sound.mp3')
+  try {
+    yield* action({ until: audio.play() })
+    yield* action({ until: mediaFinished(audio) })
+  } finally {
+    audio.pause()
+  }
+}
 ```
 
 ### Graph timelines
