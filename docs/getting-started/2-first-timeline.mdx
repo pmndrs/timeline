@@ -30,7 +30,7 @@ function Scene() {
   const red = useRef<Mesh>(null)
   const blue = useRef<Mesh>(null)
 
-  useRunTimeline(async function* () {
+  useRunTimeline(function* () {
     while (true) {
       yield* action({ update: lookAt(camera, red.current!, spring(springPresets.stiff)) })
       yield* action({ update: lookAt(camera, blue.current!, spring(springPresets.stiff)) })
@@ -142,7 +142,7 @@ function Scene() {
   const red = useRef<Mesh>(null)
   const blue = useRef<Mesh>(null)
 
-  useRunTimeline(async function* () {
+  useRunTimeline(function* () {
     while (true) {
       yield* action({ update: lookAt(camera, red.current!, spring(springPresets.stiff)) })
       yield* action({ update: lookAt(camera, blue.current!, spring(springPresets.stiff)) })

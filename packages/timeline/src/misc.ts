@@ -1,23 +1,25 @@
 import { Euler, Matrix4, Object3D, Quaternion, Vector3, type AnimationAction } from 'three'
-import { action } from './action.js'
-import { type ReusableTimeline, type ActionUpdate } from './index.js'
+import { action, type Until, type UntilCondition } from './action.js'
 import { parallel } from './parallel.js'
+import type { NonReuseableTimeline, ReusableTimeline } from './index.js'
 
 export const TimelineFallbacks = {
-  async *Error() {
+  *Error(): NonReuseableTimeline {
     throw new Error('timeline not found')
   },
-  async *Skip() {},
-  async *Idle() {
+  *Skip(): NonReuseableTimeline {},
+  *Idle(): NonReuseableTimeline {
     yield* action({ until: forever() })
   },
 }
 
 /**
- * action until function for executing an action until a certain time has passed
+ * action until condition for executing an action until a certain amount of simulation time (the sum of frame deltas) has passed
  */
-export function timePassed(time: number, unit: 'seconds' | 'milliseconds'): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, unit === 'seconds' ? time * 1000 : time))
+export function timePassed(time: number, unit: 'seconds' | 'milliseconds'): UntilCondition<unknown> {
+  const seconds = unit === 'seconds' ? time : time / 1000
+  //tolerate floating point error from summing deltas (6 * 1/60 is slightly below 0.1)
+  return (_state, _clock, actionTime) => actionTime >= seconds - 1e-9
 }
 
 /**
@@ -47,10 +49,10 @@ export function animationFinished(animation: AnimationAction): Promise<void> {
 }
 
 /**
- * action until function for executing an action until forever
+ * action until condition for executing an action until forever
  */
-export function forever() {
-  return new Promise(() => {})
+export function forever(): UntilCondition<unknown> {
+  return () => false
 }
 
 /**
@@ -63,10 +65,10 @@ export async function promiseConcat(promises: Array<Promise<unknown>>): Promise<
 }
 
 /**
- * function for generating a timeline that executes the inner timelines until a promise is met
+ * function for generating a timeline that repeats the inner timeline until the `until` condition or promise is met
  */
-export async function* doUntil<T>(promise: Promise<unknown>, timeline: ReusableTimeline<T>) {
-  yield* parallel('race', action({ until: promise }), async function* () {
+export function* doUntil<T>(until: Until<T>, timeline: ReusableTimeline<T>): NonReuseableTimeline<T> {
+  yield* parallel('race', action({ until }), function* () {
     while (true) {
       yield* timeline()
     }
@@ -74,13 +76,11 @@ export async function* doUntil<T>(promise: Promise<unknown>, timeline: ReusableT
 }
 
 /**
- * function for generating a timeline that executes the inner function while a update function returns true
+ * function for generating a timeline that repeats the inner timeline while the condition holds
+ * the condition is checked at the start of every frame; once it fails, the frame passes on to what follows
  */
-export async function* doWhile<T>(
-  update: (...params: Parameters<ActionUpdate<T>>) => boolean,
-  timeline: ReusableTimeline<T>,
-) {
-  yield* parallel('race', action({ update }), async function* () {
+export function* doWhile<T>(condition: UntilCondition<T>, timeline: ReusableTimeline<T>): NonReuseableTimeline<T> {
+  yield* parallel('race', action({ until: (...params) => !condition(...params) }), function* () {
     while (true) {
       yield* timeline()
     }

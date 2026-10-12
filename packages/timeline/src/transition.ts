@@ -33,7 +33,7 @@ export function transition<T>(
       easeMemo?: Record<string, any>
     },
   ) => {
-    if (memo.prev === null) {
+    if (memo.prev == null) {
       memo.prev = getPrevious(from, 'transition', clock)
     }
     read('position', to, goal)
@@ -50,7 +50,7 @@ export function transition<T>(
     memo.prev.copy(memo.current as any)
     write(memo.target, from)
     if (shouldContinue === false) {
-      setPrevious(from, 'transition', memo.prev)
+      setPrevious(from, 'transition', memo.prev, clock)
     }
     return shouldContinue
   }

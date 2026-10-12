@@ -1,67 +1,157 @@
 import { describe, it, expect } from 'vitest'
-import { createDeferred, step, waitForSetup, waitForCleanup } from './helpers.js'
-import { runTimeline, action, parallel } from '../src/index.js'
+import { oneTick } from './helpers.js'
+import { runTimeline, action, parallel, timePassed, doUntil, doWhile, ParallelTimeline } from '../src/index.js'
 
-describe('parallel cleanup', () => {
-  it("parallel('race') aborts remaining timelines and calls their cleanup", async () => {
-    const cleaned: number[] = [0, 0, 0]
-    const done = createDeferred<void>()
-
-    const t1 = action({
-      init: () => () => {
-        cleaned[0]++
-      },
-      update: () => false, // finishes immediately
-    })
-
-    const t2 = action({
-      init: () => () => {
-        cleaned[1]++
-      },
-      update: () => {}, // infinite until aborted
-    })
-
-    const t3 = action({
-      init: () => () => {
-        cleaned[2]++
-      },
-      until: done.promise, // will be aborted by race
-    })
-
-    const update = runTimeline(parallel('race', t1, t2, t3))
-    await waitForSetup()
-    step(update, 2)
-    await waitForCleanup()
-    expect(cleaned).toEqual([1, 1, 1])
+describe('parallel', () => {
+  it('steps every timeline once per update', () => {
+    const log: Array<string> = []
+    const update = runTimeline(
+      parallel('all', action({ update: () => void log.push('A') }), action({ update: () => void log.push('B') })),
+    )
+    update({}, 1 / 60)
+    update({}, 1 / 60)
+    expect(log).toEqual(['A', 'B', 'A', 'B'])
   })
 
-  it("parallel('all') waits for all and calls all cleanups", async () => {
-    const cleaned: number[] = [0, 0]
-    const a = createDeferred<void>()
-    const b = createDeferred<void>()
-
-    const t1 = action({
-      init: () => () => {
-        cleaned[0]++
-      },
-      until: a.promise,
+  it("'race' cancels the other timelines synchronously, running their finally blocks and cleanups", () => {
+    const log: Array<string> = []
+    const update = runTimeline(function* () {
+      yield* parallel('race', action({ update: () => false }), function* () {
+        try {
+          yield* action({ init: () => () => void log.push('cleanup') })
+        } finally {
+          log.push('finally')
+        }
+      })
+      log.push('after race')
     })
-    const t2 = action({
-      init: () => () => {
-        cleaned[1]++
-      },
-      until: b.promise,
-    })
+    update({}, 1 / 60)
+    expect(log).toEqual(['cleanup', 'finally', 'after race'])
+  })
 
-    const update = runTimeline(parallel('all', t1, t2))
-    await waitForSetup()
-    step(update, 1)
-    a.resolve()
-    await waitForCleanup()
-    // not done yet, still waiting for b
-    expect(cleaned).toEqual([1, 0])
-    b.resolve()
-    await waitForCleanup()
-    expect(cleaned).toEqual([1, 1])
+  it("'all' waits for every timeline", () => {
+    let done = false
+    const update = runTimeline(function* () {
+      yield* parallel('all', action({ until: timePassed(1, 'seconds') }), action({ until: timePassed(2, 'seconds') }))
+      done = true
+    })
+    for (let i = 0; i < 2; i++) {
+      update({}, 0.5)
+    }
+    expect(done).toBe(false)
+    for (let i = 0; i < 3; i++) {
+      update({}, 0.5)
+    }
+    expect(done).toBe(true)
+  })
+
+  it('skips false branches', () => {
+    const log: Array<string> = []
+    const update = runTimeline(parallel('all', false, oneTick(log, 'A')))
+    update({}, 1 / 60)
+    expect(log).toEqual(['A'])
+  })
+
+  it('nested parallel triggers all cleanups exactly once', () => {
+    const calls: Record<string, number> = {}
+    const mark = (key: string) => () => () => {
+      calls[key] = (calls[key] ?? 0) + 1
+    }
+    const update = runTimeline(
+      parallel(
+        'race',
+        parallel('all', action({ init: mark('innerA'), update: () => false }), action({ init: mark('innerB') })),
+        action({ init: mark('outer'), update: () => false }),
+      ),
+    )
+    update({}, 1 / 60)
+    update({}, 1 / 60)
+    expect(calls).toEqual({ innerA: 1, innerB: 1, outer: 1 })
+  })
+
+  it('doUntil repeats the timeline until the condition is met', () => {
+    const log: Array<string> = []
+    const update = runTimeline(doUntil(timePassed(1, 'seconds'), () => oneTick(log, 'tick')))
+    for (let i = 0; i < 10; i++) {
+      update({}, 0.25)
+    }
+    expect(log).toEqual(['tick', 'tick', 'tick', 'tick'])
+  })
+})
+
+describe('errors in parallel timelines', () => {
+  it('propagate out of update and cancel the other timelines', () => {
+    let cleaned = 0
+    const update = runTimeline(
+      parallel(
+        'all',
+        action({
+          update: () => {
+            throw new Error('boom')
+          },
+        }),
+        action({ init: () => () => cleaned++ }),
+      ),
+    )
+    expect(() => update({}, 1 / 60)).toThrow('boom')
+    expect(cleaned).toBe(1)
+  })
+})
+
+describe('doWhile', () => {
+  it('hands the frame on once the condition fails', () => {
+    const log: Array<string> = []
+    let frame = 0
+    const logFrame = (name: string) =>
+      action({
+        update: () => {
+          log.push(`${name} ${frame}`)
+          return false
+        },
+      })
+    const update = runTimeline(function* () {
+      yield* doWhile(
+        () => frame < 2,
+        () => logFrame('body'),
+      )
+      yield* logFrame('after')
+    })
+    for (; frame < 4; frame++) {
+      update({}, 1 / 60)
+    }
+    expect(log).toEqual(['body 0', 'body 1', 'after 2'])
+  })
+})
+
+describe('empty parallel', () => {
+  it('is done immediately and hands the frame on', () => {
+    const log: Array<string> = []
+    const update = runTimeline(function* () {
+      yield* parallel('all', false, false)
+      yield* parallel('race')
+      yield* oneTick(log, 'after')
+    })
+    update({}, 1 / 60)
+    expect(log).toEqual(['after'])
+  })
+})
+
+describe('ParallelTimeline.attach', () => {
+  it('idles while empty and runs a timeline attached later', () => {
+    const log: Array<string> = []
+    const parallelTimeline = new ParallelTimeline('all')
+    const update = runTimeline(parallelTimeline.run())
+    update({}, 1 / 60)
+    parallelTimeline.attach(() => action({ update: () => void log.push('child') }))
+    update({}, 1 / 60)
+    update({}, 1 / 60)
+    expect(log).toEqual(['child', 'child'])
+  })
+
+  it('throws when attaching the same timeline twice', () => {
+    const parallelTimeline = new ParallelTimeline('all')
+    const timeline = () => action({})
+    parallelTimeline.attach(timeline)
+    expect(() => parallelTimeline.attach(timeline)).toThrow(/already attached/)
   })
 })

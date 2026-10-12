@@ -4,7 +4,7 @@ import { AttachableProvider, useAttachTimeline } from './attachable.js'
 
 export function Loop({ children }: { children?: ReactNode }) {
   const replacable = useMemo(() => new ReplacableTimeline(), [])
-  useAttachTimeline(async function* () {
+  useAttachTimeline(function* () {
     while (true) {
       yield* replacable.run()
     }

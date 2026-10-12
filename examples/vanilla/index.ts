@@ -105,7 +105,7 @@ scene.backgroundIntensity = 0.1
 hdr.dispose()
 pmrem.dispose()
 
-async function* mainTimeline() {
+function* mainTimeline() {
   while (true) {
     yield* action({ update: lookAt(camera, redPill, spring(springPresets.stiff)) })
     yield* action({ until: timePassed(0.3, 'seconds') })
@@ -114,7 +114,7 @@ async function* mainTimeline() {
   }
 }
 
-const update = runTimeline(mainTimeline(), {})
+const update = runTimeline(mainTimeline())
 
 // animate
 let lastTimeMs = performance.now()

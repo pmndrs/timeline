@@ -5,7 +5,7 @@ import { AttachableProvider, useAttachTimeline } from './attachable.js'
 
 export const Parallel = forwardRef<ParallelTimeline<RootState>, { children?: ReactNode; type: 'all' | 'race' }>(
   ({ type, children }, ref) => {
-    const parallel = useMemo(() => new ParallelTimeline(type), [type])
+    const parallel = useMemo(() => new ParallelTimeline<RootState>(type), [type])
     useAttachTimeline(() => parallel.run(), [parallel])
     useImperativeHandle(ref, () => parallel, [parallel])
     return <AttachableProvider attachable={parallel}>{children}</AttachableProvider>

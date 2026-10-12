@@ -1,22 +1,20 @@
-import { SynchronousAbortController, SynchronousAbortSignal } from './abort.js'
-import { action } from './action.js'
-import { NonReuseableTimeline, runTimelineAsync, type Timeline, type TimelineYieldActionUpdate } from './index.js'
+import { TimelineRunner } from './runner.js'
+import type { NonReuseableTimeline, Timeline } from './index.js'
 
 /**
  * a timeline wrapper that allows to make any timeline externally cancelable via an abort signal
+ * aborting cancels the wrapped timeline immediately; the wrapper finishes on the next frame without using it
  */
-export async function* abortable<T>(timeline: Timeline<T>, abortSignal: AbortSignal): NonReuseableTimeline<T> {
-  const ref: { current?: TimelineYieldActionUpdate<T> } = {}
-  const abortController = new SynchronousAbortController()
-  const timelineFinishedOrAborted = runTimelineAsync(
-    timeline,
-    ref,
-    SynchronousAbortSignal.any([abortSignal, abortController.signal]),
-  )
-  yield* action<T>({
-    //when this action is done cancel the timeline
-    init: () => () => abortController.abort(),
-    update: (state, clock) => void ref.current?.(state, clock),
-    until: timelineFinishedOrAborted,
-  })
+export function* abortable<T>(timeline: Timeline<T>, abortSignal: AbortSignal): NonReuseableTimeline<T> {
+  if (abortSignal.aborted) {
+    return
+  }
+  const runner = new TimelineRunner(timeline)
+  const cancel = () => runner.cancel()
+  abortSignal.addEventListener('abort', cancel, { once: true })
+  try {
+    yield* runner.run()
+  } finally {
+    abortSignal.removeEventListener('abort', cancel)
+  }
 }

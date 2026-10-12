@@ -5,7 +5,7 @@ import type { ReusableTimeline, NonReuseableTimeline } from './index.js'
 export class TimelineRegister<T = unknown> {
   private readonly map = new Map<string, ReplacableTimeline<T>>()
 
-  constructor(private readonly fallbackTimeline = TimelineFallbacks.Idle) {}
+  constructor(private readonly fallbackTimeline: ReusableTimeline<T> = TimelineFallbacks.Idle) {}
 
   attach(name: string, timeline: ReusableTimeline<T>): void {
     const entry = this.map.get(name)

@@ -40,7 +40,7 @@ async function main() {
     : []
 
   const untilSet = new Set(['timePassed', 'mediaFinished', 'animationFinished', 'forever', 'promiseConcat'])
-  const structuralSet = new Set(['action', 'parallel', 'start', 'abortable', 'graph', 'doUntil', 'doWhile'])
+  const structuralSet = new Set(['action', 'parallel', 'runTimeline', 'abortable', 'graph', 'doUntil', 'doWhile'])
 
   const categories = {
     'Action Update Ease': [],
