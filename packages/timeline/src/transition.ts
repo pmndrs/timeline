@@ -9,6 +9,8 @@ export type TransitionTo = Vector3 | Quaternion | Euler | number | Array<number>
 /**
  * action update function for making a src object, position, rotation, scale, number change towards the to value
  * @param ease allows to ease the value from the current value to the target value
+ * Without an ease, vector and numeric cuts carry the preceding frame's velocity into the next action.
+ * An intervening idle frame clears that momentum; rotation cuts do not carry angular velocity.
  * @example ```tsx
  * transition(property(camera, fov), 90, spring())
  * ```
@@ -40,6 +42,19 @@ export function transition<T>(
     memo.current = read('position', from, memo.current)
     //apply ease function
     if (ease == null) {
+      if (
+        memo.prev instanceof Vector3 &&
+        memo.current instanceof Vector3 &&
+        goal instanceof Vector3 &&
+        clock.prevDelta > 0
+      ) {
+        // Encode the incoming velocity over this cut's delta, which the next action uses as prevDelta.
+        memo.prev
+          .sub(memo.current)
+          .multiplyScalar(clock.delta / clock.prevDelta)
+          .add(goal)
+        setPrevious(from, 'transition', memo.prev, clock)
+      }
       write(goal, from)
       return false
     }

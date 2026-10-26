@@ -110,6 +110,8 @@ action update function for making a src object, position, rotation, scale, numbe
 - \`from\` (`TransitionFrom | (newValue?: Vector3 | Quaternion) => number | TransitionFrom`)
 - \`to\` (`TransitionTo | () => TransitionTo`)
 - \`ease\` (`EaseFunction<T>`): allows to ease the value from the current value to the target value
+  Without an ease, vector and numeric cuts carry the preceding frame's velocity into the next action.
+  An intervening idle frame clears that momentum; rotation cuts do not carry angular velocity.
 
 #### Returns
 
