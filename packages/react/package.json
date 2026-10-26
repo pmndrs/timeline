@@ -27,7 +27,8 @@
   },
   "license": "SEE LICENSE IN LICENSE",
   "files": [
-    "dist"
+    "dist",
+    "skills"
   ],
   "publishConfig": {
     "main": "dist/index.js"

@@ -117,7 +117,8 @@ export class TimelineRunner<T = unknown> {
 
 /**
  * function for starting a timeline
- * the timeline advances only inside the returned update function; errors thrown by the timeline propagate out of it
+ * starts the generator up to its first action immediately, then advances it inside the returned update function
+ * errors propagate to the caller; deltas are passed through without clamping or substeps
  * @returns an update function which must be executed every frame with the delta time in seconds
  */
 export function runTimeline<T>(timeline: Timeline<T, unknown>, abortSignal?: AbortSignal): Update<T> {

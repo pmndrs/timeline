@@ -33,6 +33,7 @@ action update easing function for a linear ease based on the provided duration i
 ### velocity
 
 action update ease function for easing values according to the target velocity
+may overshoot the goal; finishing does not guarantee exact arrival at a waypoint
 
 #### Parameters
 
@@ -267,7 +268,8 @@ put conditions (e.g. `action({ until })`) first so that a met condition hands th
 ### runTimeline
 
 function for starting a timeline
-the timeline advances only inside the returned update function; errors thrown by the timeline propagate out of it
+starts the generator up to its first action immediately, then advances it inside the returned update function
+errors propagate to the caller; deltas are passed through without clamping or substeps
 
 #### Parameters
 
@@ -280,9 +282,23 @@ the timeline advances only inside the returned update function; errors thrown by
 
 ## Misc
 
+### Action
+
+attaches an action to the enclosing timeline; until is a factory evaluated when the action starts
+without dependencies, the latest props are read on the next start; changing dependencies reattaches the action
+
+#### Parameters
+
+- \`\_\_namedParameters\` (`{ dependencies?: unknown[]; until?: () => Until<RootState> } & Omit<ActionParams<RootState>, "until">`)
+
+#### Returns
+
+`null`
+
 ### property
 
 helper function for building a write/read function of any property in an object
+reuse the same accessor across actions to preserve momentum; transition goals for numeric properties are plain numbers
 
 #### Parameters
 

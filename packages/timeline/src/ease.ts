@@ -21,6 +21,7 @@ const offsetVector = new Vector3()
 
 /**
  * action update ease function for easing values according to the target velocity
+ * may overshoot the goal; finishing does not guarantee exact arrival at a waypoint
  * @param maxAcceleration (optional) can be used to limit the change in velocity
  */
 export function velocity(velocity: number, maxAcceleration?: number): EaseFunction<unknown> {

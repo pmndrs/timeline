@@ -188,6 +188,7 @@ export function worldSpace<Type extends keyof WorldSpaceResults>(
 
 /**
  * helper function for building a write/read function of any property in an object
+ * reuse the same accessor across actions to preserve momentum; transition goals for numeric properties are plain numbers
  * @param object the object from which to read/write a property
  * @param key the key of the property from which to read/write inside of the object
  */

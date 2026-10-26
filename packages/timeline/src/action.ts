@@ -1,6 +1,7 @@
 import type { NonReuseableTimeline, TimelineClock } from './index.js'
 
 /**
+ * actionTime includes the current frame's delta; memo persists for this update within the action
  * @returns true if the action update should continue (default)
  * @returns false if the action update should not continue
  */
@@ -32,7 +33,14 @@ export type ActionParams<T> = {
    * for async setup, wait first and keep the result: `yield* action({ until: load().then((value) => (model = value)) })`
    */
   readonly init?: () => Cleanup | void
+  /**
+   * every update runs; the first boolean result decides whether the action continues
+   * an update returning false ends the action even if its until condition is not yet met
+   */
   readonly update?: ActionUpdate<T> | Array<ActionUpdate<T>>
+  /**
+   * ends the action before its update when satisfied; cancelling the action does not cancel external promise work
+   */
   readonly until?: Until<T>
 }
 

@@ -3,6 +3,10 @@ import { RootState } from '@react-three/fiber'
 import { useMemo } from 'react'
 import { useAttachTimeline } from './attachable.js'
 
+/**
+ * attaches an action to the enclosing timeline; until is a factory evaluated when the action starts
+ * without dependencies, the latest props are read on the next start; changing dependencies reattaches the action
+ */
 export function Action({
   dependencies,
   ...params
