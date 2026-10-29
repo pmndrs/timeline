@@ -120,12 +120,12 @@ yield * action(B)
 
 #### Parallel composition
 
-- **All**: `yield* parallel('all', A, B)` continues when both finish
-- **Race**: `yield* parallel('race', A, B)` continues when the first finishes
+- **All**: `yield* parallel('all', A, B)` continues when both finish and returns `false` if one of them returned `false`, otherwise `true`
+- **Race**: `yield* parallel('race', A, B)` continues when the first finishes and returns what that one returned
 
 ```ts
-yield * parallel('all', A, B)
-yield * parallel('race', A, B)
+const bothSucceeded = yield * parallel('all', A, B)
+const firstOutcome = yield * parallel('race', A, B)
 ```
 
 ### Sub-timelines

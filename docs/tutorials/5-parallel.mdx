@@ -77,8 +77,8 @@ createRoot(root).render(<App />)
 
 ### Key ideas
 
-- **parallel('all', ...)** waits for all child timelines to finish.
-- **parallel('race', ...)** continues as soon as the first child finishes and cancels the rest.
+- **parallel('all', ...)** waits for all child timelines to finish. It returns `false` if a child returned `false`, otherwise `true`.
+- **parallel('race', ...)** continues as soon as the first child finishes and cancels the rest. It returns what the first child returned.
 
 ### Build it in steps
 

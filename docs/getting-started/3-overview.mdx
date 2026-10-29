@@ -250,11 +250,18 @@ timeline function for building a state graph with transitions as edges
 ### parallel
 
 function for executing multiple timelines in parallel
-each timeline receives every frame in the given order; `false` entries are skipped
+each timeline receives every frame in the given order; `false` and `true` entries are skipped
 without any timelines (e.g. all entries are `false`), it returns immediately
 
 in a `"race"`, the first timeline that finishes ends the race before later timelines receive the frame;
 put conditions (e.g. `action({ until })`) first so that a met condition hands the frame on to what follows the race
+
+the outcome (what `yield* parallel(...)` returns):
+
+- `"race"` returns what the timeline that ended first returned (never what a cancelled timeline returns); `undefined` without timelines
+- `"all"` returns `false` if any timeline returned `false`, otherwise `true` (a timeline returning nothing counts as succeeded); `true` without timelines
+
+the race's outcome is typed from its timelines; with an explicit state type argument (`parallel<State>('race', ...)`) it is `unknown`
 
 #### Parameters
 
@@ -263,7 +270,7 @@ put conditions (e.g. `action({ until })`) first so that a met condition hands th
 
 #### Returns
 
-`NonReuseableTimeline<T>`
+`NonReuseableTimeline<T, RaceOutcome<B>>` for `"race"`, `NonReuseableTimeline<T, boolean>` for `"all"`
 
 ### runTimeline
 

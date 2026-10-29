@@ -12,6 +12,7 @@ const MaxSkippedActions = 10_000
 export class TimelineRunner<T = unknown> {
   private readonly generator: NonReuseableTimeline<T, unknown>
   private action?: TimelineYield<T>
+  private returned?: { value: unknown }
   private busy = false
   private cancelRequested = false
 
@@ -22,6 +23,19 @@ export class TimelineRunner<T = unknown> {
 
   get finished(): boolean {
     return this.action == null
+  }
+
+  /**
+   * what the timeline returned when it ended
+   * throws while it is running or once it was cancelled, since then it returned nothing
+   */
+  get outcome(): unknown {
+    if (this.returned == null) {
+      throw new Error(
+        `a timeline has an outcome only once it has returned, not while it runs or after it was cancelled`,
+      )
+    }
+    return this.returned.value
   }
 
   /**
@@ -102,7 +116,9 @@ export class TimelineRunner<T = unknown> {
     this.busy = true
     try {
       const result = advance()
-      if (!result.done) {
+      if (result.done) {
+        this.returned = { value: result.value }
+      } else {
         this.action = result.value
       }
     } finally {

@@ -83,7 +83,7 @@ export function* doWhile<T>(
   condition: UntilCondition<T>,
   timeline: ReusableTimeline<T, unknown>,
 ): NonReuseableTimeline<T> {
-  yield* parallel('race', action({ until: (...params) => !condition(...params) }), function* () {
+  yield* parallel('race', action<T>({ until: (...params) => !condition(...params) }), function* () {
     while (true) {
       yield* timeline()
     }

@@ -72,6 +72,24 @@ function* timedDriver(step: (delta: number) => void) {
 }
 ```
 
+Read a branch's result from the parallel instead of setting a flag inside the branch. A race returns what its ending branch returned and never a cancelled branch's value; `all` returns `false` when any branch returned `false`, and `true` otherwise, including for branches that return nothing.
+
+```ts
+import { action, parallel, timePassed, type NonReuseableTimeline } from '@pmndrs/timeline'
+
+function* approach(walk: () => NonReuseableTimeline<unknown, boolean>) {
+  const arrived = yield* parallel('race', walk, function* () {
+    yield* action({ until: timePassed(5, 'seconds') })
+    return false
+  })
+  if (!arrived) {
+    yield* action({ until: timePassed(1, 'seconds') })
+  }
+}
+```
+
+The race's type is the union of its branches' results, plus `undefined` when it may have no branch to run (boolean entries or a spread array). An explicit state type argument, as in `parallel<State>('race', ...)`, stops that inference and types the result `unknown`; let the branches carry the state type instead.
+
 A settling movement can silently extend a dialogue beat under `all`. Use a race if the dialogue should govern, and bind playback resources to cleanup so a cancelled beat cannot leak sound into the next one. A driver intended to fill the whole beat should not accidentally forward another function's completion result.
 
 For state-driven actors, put the actor's graph beside the scene sequence rather than turning every cinematic beat into a state. For procedural ensembles, use one continuous driver over actor intents, and stagger changes when unison is not intended. Give arrival an explicit next behavior so actors do not simply pile up and stop.
