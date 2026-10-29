@@ -7,14 +7,14 @@ type Run<T> = { runner: TimelineRunner<T>; restart: boolean }
 export class ReplacableTimeline<T = unknown> {
   private readonly runs = new Set<Run<T>>()
 
-  private currentTimeline: ReusableTimeline<T>
+  private currentTimeline: ReusableTimeline<T, unknown>
   private isAttached = false
 
-  constructor(private readonly fallback: ReusableTimeline<T> = TimelineFallbacks.Idle) {
+  constructor(private readonly fallback: ReusableTimeline<T, unknown> = TimelineFallbacks.Idle) {
     this.currentTimeline = fallback
   }
 
-  attach(timeline: ReusableTimeline<T>): void {
+  attach(timeline: ReusableTimeline<T, unknown>): void {
     if (this.isAttached) {
       throw new Error(`cannot attach to a timeline that already has another timeline attached`)
     }

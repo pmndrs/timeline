@@ -5,7 +5,7 @@ import type { UntilCondition } from './action.js'
 import type { NonReuseableTimeline, ReusableTimeline } from './index.js'
 
 export class QueueTimeline<T = unknown> extends Singleton<T> {
-  private readonly entries: Array<ReusableTimeline<T>> = []
+  private readonly entries: Array<ReusableTimeline<T, unknown>> = []
 
   get length(): number {
     return this.entries.length
@@ -15,7 +15,7 @@ export class QueueTimeline<T = unknown> extends Singleton<T> {
     super()
   }
 
-  attach(timeline: ReusableTimeline<T>, index = Infinity): void {
+  attach(timeline: ReusableTimeline<T, unknown>, index = Infinity): void {
     index = Math.max(0, Math.min(this.entries.length, Math.floor(index)))
     this.entries.splice(index, 0, timeline)
   }
@@ -32,7 +32,7 @@ export class QueueTimeline<T = unknown> extends Singleton<T> {
   }
 
   protected *unsafeRun(): NonReuseableTimeline<T> {
-    let entry: ReusableTimeline<T> | undefined
+    let entry: ReusableTimeline<T, unknown> | undefined
     while ((entry = this.entries.shift()) != null) {
       yield* entry()
     }

@@ -5,7 +5,7 @@ import type { NonReuseableTimeline, Timeline } from './index.js'
  * a timeline wrapper that allows to make any timeline externally cancelable via an abort signal
  * aborting cancels the wrapped timeline immediately; the wrapper finishes on the next frame without using it
  */
-export function* abortable<T>(timeline: Timeline<T>, abortSignal: AbortSignal): NonReuseableTimeline<T> {
+export function* abortable<T>(timeline: Timeline<T, unknown>, abortSignal: AbortSignal): NonReuseableTimeline<T> {
   if (abortSignal.aborted) {
     return
   }

@@ -8,14 +8,14 @@ export type SwitchTimelineCase<T> = {
    * leaving the condition empty means this is the default case
    */
   condition?: SwitchTimelineCaseCondition<T>
-  timeline: ReusableTimeline<T>
+  timeline: ReusableTimeline<T, unknown>
 }
 export type SwitchTimelineCaseCondition<T> = (...params: Parameters<ActionUpdate<T>>) => boolean
 
 export class SwitchTimeline<T = unknown> {
   constructor(private readonly cases: Array<SwitchTimelineCase<T> | undefined> = []) {}
 
-  attach(index: number, condition: SwitchTimelineCaseCondition<T>, timeline: ReusableTimeline<T>) {
+  attach(index: number, condition: SwitchTimelineCaseCondition<T>, timeline: ReusableTimeline<T, unknown>) {
     if (index < 0) {
       throw new Error(`the switch case index must be a positive number including 0`)
     }

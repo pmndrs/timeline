@@ -67,7 +67,7 @@ export async function promiseConcat(promises: Array<Promise<unknown>>): Promise<
 /**
  * function for generating a timeline that repeats the inner timeline until the `until` condition or promise is met
  */
-export function* doUntil<T>(until: Until<T>, timeline: ReusableTimeline<T>): NonReuseableTimeline<T> {
+export function* doUntil<T>(until: Until<T>, timeline: ReusableTimeline<T, unknown>): NonReuseableTimeline<T> {
   yield* parallel('race', action({ until }), function* () {
     while (true) {
       yield* timeline()
@@ -79,7 +79,10 @@ export function* doUntil<T>(until: Until<T>, timeline: ReusableTimeline<T>): Non
  * function for generating a timeline that repeats the inner timeline while the condition holds
  * the condition is checked at the start of every frame; once it fails, the frame passes on to what follows
  */
-export function* doWhile<T>(condition: UntilCondition<T>, timeline: ReusableTimeline<T>): NonReuseableTimeline<T> {
+export function* doWhile<T>(
+  condition: UntilCondition<T>,
+  timeline: ReusableTimeline<T, unknown>,
+): NonReuseableTimeline<T> {
   yield* parallel('race', action({ until: (...params) => !condition(...params) }), function* () {
     while (true) {
       yield* timeline()

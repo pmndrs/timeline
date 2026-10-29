@@ -37,7 +37,7 @@ export class GraphTimeline<T = unknown> extends Singleton<T> {
     public enterState: string,
     states: GraphTimelineStateMap<T> = {},
     public exitState?: string,
-    private readonly fallback: ReusableTimeline<T> = TimelineFallbacks.Idle,
+    private readonly fallback: ReusableTimeline<T, unknown> = TimelineFallbacks.Idle,
     private readonly resetOnRun: boolean = true,
   ) {
     super()

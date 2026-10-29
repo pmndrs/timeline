@@ -3,16 +3,16 @@ import { Singleton } from './singleton.js'
 import type { ActionStatus, NonReuseableTimeline, ReusableTimeline, Timeline, TimelineClock } from './index.js'
 
 export class ParallelTimeline<T = unknown> extends Singleton<T> {
-  private runners?: Map<ReusableTimeline<T>, TimelineRunner<T>>
+  private runners?: Map<ReusableTimeline<T, unknown>, TimelineRunner<T>>
 
   constructor(
     private readonly type: 'all' | 'race',
-    private readonly timelines = new Set<ReusableTimeline<T>>(),
+    private readonly timelines = new Set<ReusableTimeline<T, unknown>>(),
   ) {
     super()
   }
 
-  attach(timeline: ReusableTimeline<T>): void {
+  attach(timeline: ReusableTimeline<T, unknown>): void {
     if (this.timelines.has(timeline)) {
       throw new Error(`cannot attach a timeline that is already attached`)
     }
@@ -20,14 +20,14 @@ export class ParallelTimeline<T = unknown> extends Singleton<T> {
     this.runners?.set(timeline, new TimelineRunner(timeline))
   }
 
-  unattach(timeline: ReusableTimeline<T>): void {
+  unattach(timeline: ReusableTimeline<T, unknown>): void {
     this.timelines.delete(timeline)
     this.runners?.get(timeline)?.cancel()
     this.runners?.delete(timeline)
   }
 
   protected *unsafeRun(): NonReuseableTimeline<T> {
-    const runners = new Map<ReusableTimeline<T>, TimelineRunner<T>>()
+    const runners = new Map<ReusableTimeline<T, unknown>, TimelineRunner<T>>()
     this.runners = runners
     try {
       for (const timeline of this.timelines) {
@@ -42,7 +42,11 @@ export class ParallelTimeline<T = unknown> extends Singleton<T> {
     }
   }
 
-  private step(runners: Map<ReusableTimeline<T>, TimelineRunner<T>>, state: T, clock: TimelineClock): ActionStatus {
+  private step(
+    runners: Map<ReusableTimeline<T, unknown>, TimelineRunner<T>>,
+    state: T,
+    clock: TimelineClock,
+  ): ActionStatus {
     if (this.isDone(runners)) {
       return 'skipped'
     }
@@ -64,7 +68,7 @@ export class ParallelTimeline<T = unknown> extends Singleton<T> {
     return usedFrame ? 'finished' : 'skipped'
   }
 
-  private isDone(runners: Map<ReusableTimeline<T>, TimelineRunner<T>>): boolean {
+  private isDone(runners: Map<ReusableTimeline<T, unknown>, TimelineRunner<T>>): boolean {
     //an empty container idles until a timeline is attached
     if (runners.size === 0) {
       return false
@@ -96,7 +100,7 @@ export function* parallel<T>(
 ): NonReuseableTimeline<T> {
   const reusables = timelines
     .filter((timeline) => typeof timeline != 'boolean')
-    .map((timeline): ReusableTimeline<T> => (typeof timeline === 'function' ? timeline : () => timeline))
+    .map((timeline): ReusableTimeline<T, unknown> => (typeof timeline === 'function' ? timeline : () => timeline))
   if (reusables.length === 0) {
     return
   }

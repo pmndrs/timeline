@@ -9,7 +9,7 @@ export function useTimelineRegister(): TimelineRegister<RootState> {
   return useContext(TimelineRegisterContext)
 }
 
-export function useRegisterTimeline(name: string, timeline: ReusableTimeline<RootState>, deps: Array<any>) {
+export function useRegisterTimeline(name: string, timeline: ReusableTimeline<RootState, unknown>, deps: Array<any>) {
   const register = useTimelineRegister()
   useEffect(() => {
     register.attach(name, timeline)
